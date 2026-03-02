@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Frappe specific
+sites/*/logs/
+sites/*/private/backups/
+sites/*/indexes/
+config/pids/
+*.rdb
+
+# IDE
+.vscode/
+.idea/
+
+# Auto-claude
+.auto-claude*/
+env/
+logs/
+node_modules/
+__pycache__/
+*.pyc
+*.log
+.git/
+sites/*/private/
+sites/*/public/files/

@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2025-12-18 11:02:17.901792",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user_email",
+  "status",
+  "check_in_time",
+  "check_out_time",
+  "work_duration_minutes",
+  "date"
+ ],
+ "fields": [
+  {
+   "fieldname": "user_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nChecked In\nChecked Out",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_in_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Giri\u015f Zaman\u0131",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_out_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u00c7\u0131k\u0131\u015f Zaman\u0131",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_duration_minutes",
+   "fieldtype": "Int",
+   "label": "\u00c7al\u0131\u015fma S\u00fcresi",
+   "read_only": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-19 10:25:42.451908",
+ "modified_by": "Administrator",
+ "module": "BI",
+ "name": "Daily Checkin",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

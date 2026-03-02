@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-19 10:47:15.554278",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user_email",
+  "present_days",
+  "absent_days",
+  "expected_hours",
+  "missing_hours",
+  "worked_hours",
+  "early_exit_count",
+  "deduction_type",
+  "deduction_value"
+ ],
+ "fields": [
+  {
+   "fieldname": "user_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "User Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "present_days",
+   "fieldtype": "Int",
+   "label": "Present Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "absent_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Absent Days",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expected_hours",
+   "fieldtype": "Float",
+   "label": "Expected Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "worked_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Worked Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "early_exit_count",
+   "fieldtype": "Int",
+   "label": "Early Exit Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deduction_type",
+   "fieldtype": "Select",
+   "label": "Deduction Type",
+   "options": "None\nHour\nDay",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deduction_value",
+   "fieldtype": "Float",
+   "label": "Deduction Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "missing_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Missing Hours",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-19 14:06:49.661075",
+ "modified_by": "Administrator",
+ "module": "BI",
+ "name": "PDKS Monthly Employee",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

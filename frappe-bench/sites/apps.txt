@@ -1,0 +1,5 @@
+frappe
+erpnext
+cronbi
+hrms
+frappe_pim

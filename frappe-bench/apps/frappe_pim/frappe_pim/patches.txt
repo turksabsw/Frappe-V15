@@ -1,0 +1,6 @@
+# Frappe PIM Patches
+# This file lists database migration patches that will be executed during bench migrate
+# Format: frappe_pim.patches.patch_module.patch_function
+#
+# Example:
+# frappe_pim.patches.v0_1.add_completeness_score_index

@@ -1,0 +1,32 @@
+{
+ "allow_cors": [
+  "http://localhost:5173",
+  "http://frappe.local:8000"
+ ],
+ "cors_allow_credentials": false,
+ "cors_allow_headers": [
+  "Authorization",
+  "Content-Type",
+  "Accept"
+ ],
+ "cors_allow_methods": [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "OPTIONS"
+ ],
+ "db_name": "_ea22d29c2a3c10f6",
+ "db_password": "PqXoXNBWvuRX18RN",
+ "disable_desk": true,
+ "disable_session": true,
+ "disable_website": true,
+ "encryption_key": "9T3g9XlA-80yiJsgvOJbAZnWoffSMZGIIpo_7tHyoaw=",
+ "ignore_csrf": [
+  "/api/*"
+ ],
+ "skip_delete_orphan_doctypes": true,
+ "user_type_doctype_limit": {
+  "employee_self_service": 40
+ }
+}

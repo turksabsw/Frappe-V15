@@ -1,0 +1,936 @@
+{
+    "app_name": "frappe_pim",
+    "version": "1.0.0",
+    "description": "Product Information Management for Frappe Framework",
+    "core_philosophy": {
+      "principle": "product_centric_universe",
+      "summary": "Ürün bir güneş gibidir. Tüm kavramlar bu güneşin etrafında döner.",
+      "pillars": [
+        "merkezilik",
+        "genellestirme",
+        "baglantisallik"
+      ],
+      "rules": {
+        "product_family": "Ortak DNA taşıyan ürünler. Bundle/Paket değil, soy ağacı.",
+        "attribute_vs_entity": "Sektörel önem kavramsal kategoriyi değiştirmez. Vitamin = Attribute.",
+        "template_thinking": "Kalıp ve döküm metaforu. Şablon tekrar eden yapıları standartlaştırır."
+      }
+    },
+    "doctypes": {
+      "core": [
+        {
+          "name": "Product Family",
+          "description": "Ürün ailesi - ortak DNA",
+          "is_submittable": false,
+          "fields": [
+            "family_name",
+            "sector",
+            "description",
+            "parent_family"
+          ]
+        },
+        {
+          "name": "Product Master",
+          "description": "Ana ürün merkezi - kontrol paneli",
+          "is_submittable": true,
+          "is_connection_hub": true,
+          "fields": [
+            "product_code",
+            "product_name",
+            "product_family",
+            "product_type",
+            "status"
+          ]
+        },
+        {
+          "name": "Product Type",
+          "description": "Ürün tipi (Gaming Mouse, Office Mouse)",
+          "fields": [
+            "type_name",
+            "product_family",
+            "attribute_template"
+          ]
+        },
+        {
+          "name": "Product Variant",
+          "description": "Renk, kapasite, gramaj varyasyonları",
+          "fields": [
+            "variant_code",
+            "product_master",
+            "variant_attributes"
+          ]
+        }
+      ],
+      "attribute_engine": [
+        {
+          "name": "Attribute",
+          "description": "Gerçek veri taşıyıcı",
+          "fields": [
+            "attribute_name",
+            "input_type",
+            "unit",
+            "options",
+            "is_required",
+            "attribute_group"
+          ]
+        },
+        {
+          "name": "Attribute Group",
+          "description": "Mantıksal gruplama - UI only",
+          "fields": [
+            "group_name",
+            "display_order",
+            "collapsed_default"
+          ]
+        },
+        {
+          "name": "Attribute Template",
+          "description": "Attribute setleri için şablon",
+          "fields": [
+            "template_name",
+            "sector",
+            "attributes"
+          ]
+        },
+        {
+          "name": "Product Attribute Value",
+          "description": "Ürün-attribute değer bağlantısı",
+          "fields": [
+            "product_master",
+            "attribute",
+            "value",
+            "unit"
+          ]
+        }
+      ],
+      "content": [
+        {
+          "name": "Product Content",
+          "description": "Ürün içerikleri",
+          "fields": [
+            "product_master",
+            "content_type",
+            "language",
+            "content",
+            "status"
+          ]
+        },
+        {
+          "name": "Content Category",
+          "description": "İçerik şablonları",
+          "fields": [
+            "category_name",
+            "template",
+            "guidelines"
+          ]
+        }
+      ],
+      "compliance": [
+        {
+          "name": "SDS Document",
+          "description": "Safety Data Sheet",
+          "fields": [
+            "product_master",
+            "sds_version",
+            "echa_pictograms",
+            "hazard_statements"
+          ]
+        },
+        {
+          "name": "ECHA Pictogram",
+          "description": "ECHA standart piktogramları",
+          "fields": [
+            "code",
+            "name",
+            "image",
+            "description"
+          ]
+        }
+      ],
+      "packaging": [
+        {
+          "name": "Package Type",
+          "description": "Ambalaj tipi entity",
+          "fields": [
+            "package_name",
+            "gs1_level",
+            "dimensions",
+            "weight"
+          ]
+        },
+        {
+          "name": "Product Package",
+          "description": "Ürün-ambalaj ilişkisi",
+          "fields": [
+            "product_master",
+            "package_type",
+            "quantity",
+            "barcode"
+          ]
+        }
+      ],
+      "collaboration": [
+        {
+          "name": "Product Contributor",
+          "description": "Katkıda bulunanlar",
+          "fields": [
+            "product_master",
+            "user",
+            "role",
+            "contribution_order",
+            "description"
+          ]
+        },
+        {
+          "name": "Product Review",
+          "description": "Attribute bazlı yorumlar",
+          "fields": [
+            "product_master",
+            "user",
+            "attribute_ratings",
+            "overall_rating",
+            "comment"
+          ]
+        }
+      ]
+    },
+    "integrations": {
+      "erpnext": {
+        "enabled": true,
+        "priority": 1,
+        "hooks": {
+          "on_product_create": "Create Item in ERPNext",
+          "on_variant_create": "Create Item Variant",
+          "on_price_update": "Sync Price List"
+        },
+        "linked_doctypes": {
+          "Product Master": "Item",
+          "Product Variant": "Item Variant",
+          "Product Package": "Item",
+          "Price Rule": "Pricing Rule"
+        },
+        "sync_fields": {
+          "product_name": "item_name",
+          "product_code": "item_code",
+          "description": "description",
+          "product_family": "item_group"
+        },
+        "bom_integration": {
+          "enabled": true,
+          "direction": "bidirectional",
+          "link_field": "product_master"
+        },
+        "stock_integration": {
+          "chain": [
+            "Product Master",
+            "Item",
+            "Variant",
+            "Stock Ledger"
+          ],
+          "real_time_sync": true
+        }
+      },
+      "frappe_insights": {
+        "enabled": true,
+        "priority": 2,
+        "purpose": "BI ve raporlama",
+        "data_sources": [
+          "Product Master",
+          "Product Attribute Value",
+          "Product Review",
+          "Price Rule"
+        ],
+        "dashboards": [
+          {
+            "name": "Product Analytics",
+            "widgets": [
+              "product_count_by_family",
+              "attribute_coverage",
+              "review_scores"
+            ]
+          },
+          {
+            "name": "Price Intelligence",
+            "widgets": [
+              "price_distribution",
+              "margin_analysis",
+              "competitor_comparison"
+            ]
+          }
+        ]
+      },
+      "frappe_builder": {
+        "enabled": true,
+        "priority": 2,
+        "purpose": "Web sunum katmanı",
+        "components": {
+          "product_card": {
+            "data_source": "Product Master",
+            "fields": [
+              "image",
+              "name",
+              "price",
+              "attributes"
+            ]
+          },
+          "product_detail": {
+            "data_source": "Product Master",
+            "sections": [
+              "gallery",
+              "attributes",
+              "content",
+              "reviews",
+              "variants"
+            ]
+          },
+          "category_listing": {
+            "data_source": "Product Family",
+            "pagination": true
+          }
+        },
+        "api_endpoints": [
+          "/api/pim/products",
+          "/api/pim/families",
+          "/api/pim/search"
+        ]
+      },
+      "print_designer": {
+        "enabled": true,
+        "priority": 3,
+        "purpose": "Ürün etiketleri ve katalog",
+        "templates": [
+          {
+            "name": "Product Label",
+            "size": "50x30mm",
+            "fields": [
+              "barcode",
+              "product_name",
+              "price",
+              "attributes"
+            ]
+          },
+          {
+            "name": "Product Catalog Page",
+            "size": "A4",
+            "layout": "grid",
+            "products_per_page": 6
+          },
+          {
+            "name": "SDS Print",
+            "size": "A4",
+            "sections": [
+              "header",
+              "hazards",
+              "composition",
+              "handling"
+            ]
+          }
+        ]
+      },
+      "frappe_crm": {
+        "enabled": true,
+        "priority": 3,
+        "purpose": "Müşteri-ürün ilişkisi",
+        "link_points": {
+          "Lead": "interested_products",
+          "Deal": "quoted_products",
+          "Organization": "purchased_products"
+        },
+        "features": {
+          "product_recommendations": true,
+          "purchase_history": true,
+          "cross_sell_suggestions": true
+        }
+      },
+      "raven": {
+        "enabled": true,
+        "priority": 4,
+        "purpose": "Takım iletişimi",
+        "notifications": {
+          "on_product_submit": "Notify product team channel",
+          "on_review_received": "Notify product owner",
+          "on_sds_expiry": "Alert compliance team"
+        },
+        "channels": [
+          "pim-updates",
+          "product-reviews",
+          "compliance-alerts"
+        ]
+      },
+      "whatsapp_integration": {
+        "enabled": true,
+        "priority": 4,
+        "purpose": "Müşteri bildirimleri",
+        "triggers": {
+          "price_change": "Notify subscribed customers",
+          "new_product": "Broadcast to interest groups",
+          "stock_alert": "Notify waiting customers"
+        },
+        "templates": [
+          "product_update",
+          "price_alert",
+          "back_in_stock"
+        ]
+      },
+      "sheets_integration": {
+        "enabled": true,
+        "priority": 3,
+        "purpose": "Toplu veri import/export",
+        "sync_tables": [
+          {
+            "doctype": "Product Master",
+            "direction": "bidirectional",
+            "sheet_name": "Products"
+          },
+          {
+            "doctype": "Product Attribute Value",
+            "direction": "bidirectional",
+            "sheet_name": "Attributes"
+          },
+          {
+            "doctype": "Price Rule",
+            "direction": "bidirectional",
+            "sheet_name": "Prices"
+          }
+        ]
+      },
+      "frappe_graphql": {
+        "enabled": true,
+        "priority": 2,
+        "purpose": "API katmanı",
+        "schemas": {
+          "Product": {
+            "fields": [
+              "code",
+              "name",
+              "family",
+              "type",
+              "attributes",
+              "variants",
+              "prices"
+            ],
+            "queries": [
+              "product",
+              "products",
+              "productsByFamily",
+              "searchProducts"
+            ],
+            "mutations": [
+              "createProduct",
+              "updateProduct",
+              "addAttribute"
+            ]
+          },
+          "Attribute": {
+            "fields": [
+              "name",
+              "type",
+              "value",
+              "unit"
+            ],
+            "queries": [
+              "attribute",
+              "attributesByTemplate"
+            ]
+          }
+        }
+      },
+      "background_tasks_unleashed": {
+        "enabled": true,
+        "priority": 3,
+        "purpose": "Zamanlanmış görevler",
+        "scheduled_tasks": [
+          {
+            "name": "sync_erpnext_items",
+            "cron": "0 */6 * * *",
+            "description": "ERPNext item senkronizasyonu"
+          },
+          {
+            "name": "check_sds_expiry",
+            "cron": "0 9 * * *",
+            "description": "SDS son kullanma kontrolü"
+          },
+          {
+            "name": "generate_product_reports",
+            "cron": "0 0 * * 1",
+            "description": "Haftalık ürün raporları"
+          },
+          {
+            "name": "cleanup_draft_products",
+            "cron": "0 2 * * *",
+            "description": "Eski taslakları temizle"
+          }
+        ]
+      },
+      "dfp_external_storage": {
+        "enabled": true,
+        "priority": 4,
+        "purpose": "Medya depolama",
+        "folders": {
+          "product_images": "s3://pim-bucket/images/",
+          "sds_documents": "s3://pim-bucket/sds/",
+          "catalogs": "s3://pim-bucket/catalogs/"
+        }
+      },
+      "frappe_mcp": {
+        "enabled": true,
+        "priority": 5,
+        "purpose": "AI entegrasyonu",
+        "capabilities": {
+          "product_description_generation": true,
+          "attribute_extraction": true,
+          "image_tagging": true,
+          "translation": true,
+          "review_sentiment_analysis": true
+        },
+        "prompts": {
+          "generate_description": "Generate marketing description for product: {product_name}",
+          "extract_attributes": "Extract product attributes from text: {raw_text}",
+          "translate_content": "Translate to {language}: {content}"
+        }
+      },
+      "india_compliance": {
+        "enabled": false,
+        "priority": 5,
+        "purpose": "Hindistan vergi uyumu",
+        "features": [
+          "hsn_code",
+          "gst_category",
+          "e_invoice"
+        ]
+      },
+      "erpnext_germany": {
+        "enabled": false,
+        "priority": 5,
+        "purpose": "Almanya uyumu",
+        "features": [
+          "datev_export",
+          "german_tax_categories"
+        ]
+      }
+    },
+    "api": {
+      "rest": {
+        "base_url": "/api/method/frappe_pim",
+        "endpoints": [
+          {
+            "path": "/products",
+            "methods": [
+              "GET",
+              "POST"
+            ],
+            "description": "Ürün listesi ve oluşturma"
+          },
+          {
+            "path": "/products/{code}",
+            "methods": [
+              "GET",
+              "PUT",
+              "DELETE"
+            ],
+            "description": "Tekil ürün işlemleri"
+          },
+          {
+            "path": "/products/{code}/attributes",
+            "methods": [
+              "GET",
+              "POST"
+            ],
+            "description": "Ürün attribute'ları"
+          },
+          {
+            "path": "/products/{code}/variants",
+            "methods": [
+              "GET",
+              "POST"
+            ],
+            "description": "Ürün varyantları"
+          },
+          {
+            "path": "/families",
+            "methods": [
+              "GET"
+            ],
+            "description": "Ürün aileleri"
+          },
+          {
+            "path": "/templates",
+            "methods": [
+              "GET"
+            ],
+            "description": "Attribute şablonları"
+          },
+          {
+            "path": "/search",
+            "methods": [
+              "GET"
+            ],
+            "description": "Ürün arama"
+          }
+        ]
+      },
+      "webhooks": {
+        "outgoing": [
+          {
+            "event": "product.created",
+            "payload": [
+              "product_code",
+              "product_name",
+              "family"
+            ]
+          },
+          {
+            "event": "product.updated",
+            "payload": [
+              "product_code",
+              "changed_fields"
+            ]
+          },
+          {
+            "event": "product.submitted",
+            "payload": [
+              "product_code",
+              "product_name",
+              "all_attributes"
+            ]
+          },
+          {
+            "event": "variant.created",
+            "payload": [
+              "variant_code",
+              "product_code",
+              "variant_attributes"
+            ]
+          },
+          {
+            "event": "price.updated",
+            "payload": [
+              "product_code",
+              "old_price",
+              "new_price"
+            ]
+          }
+        ],
+        "incoming": [
+          {
+            "endpoint": "/api/pim/webhook/stock_update",
+            "source": "ERPNext",
+            "action": "update_availability"
+          },
+          {
+            "endpoint": "/api/pim/webhook/order_placed",
+            "source": "E-Commerce",
+            "action": "track_sales"
+          }
+        ]
+      }
+    },
+    "hooks": {
+      "doc_events": {
+        "Product Master": {
+          "on_submit": [
+            "frappe_pim.integrations.erpnext.create_item",
+            "frappe_pim.integrations.raven.notify_team"
+          ],
+          "on_update": [
+            "frappe_pim.integrations.erpnext.sync_item"
+          ],
+          "on_trash": [
+            "frappe_pim.integrations.erpnext.archive_item"
+          ]
+        },
+        "Product Variant": {
+          "on_submit": [
+            "frappe_pim.integrations.erpnext.create_variant"
+          ]
+        },
+        "Price Rule": {
+          "on_update": [
+            "frappe_pim.integrations.erpnext.sync_pricing_rule",
+            "frappe_pim.integrations.whatsapp.notify_price_change"
+          ]
+        },
+        "SDS Document": {
+          "on_submit": [
+            "frappe_pim.compliance.validate_echa_requirements"
+          ]
+        }
+      },
+      "scheduler_events": {
+        "daily": [
+          "frappe_pim.tasks.check_sds_expiry",
+          "frappe_pim.tasks.sync_stock_levels"
+        ],
+        "weekly": [
+          "frappe_pim.tasks.generate_reports",
+          "frappe_pim.tasks.cleanup_orphan_attributes"
+        ]
+      }
+    },
+    "fixtures": [
+      {
+        "doctype": "ECHA Pictogram",
+        "records": [
+          {
+            "code": "GHS01",
+            "name": "Exploding Bomb"
+          },
+          {
+            "code": "GHS02",
+            "name": "Flame"
+          },
+          {
+            "code": "GHS03",
+            "name": "Flame Over Circle"
+          },
+          {
+            "code": "GHS04",
+            "name": "Gas Cylinder"
+          },
+          {
+            "code": "GHS05",
+            "name": "Corrosion"
+          },
+          {
+            "code": "GHS06",
+            "name": "Skull and Crossbones"
+          },
+          {
+            "code": "GHS07",
+            "name": "Exclamation Mark"
+          },
+          {
+            "code": "GHS08",
+            "name": "Health Hazard"
+          },
+          {
+            "code": "GHS09",
+            "name": "Environment"
+          }
+        ]
+      },
+      {
+        "doctype": "Attribute Group",
+        "records": [
+          {
+            "group_name": "General",
+            "display_order": 1
+          },
+          {
+            "group_name": "Physical",
+            "display_order": 2
+          },
+          {
+            "group_name": "Technical",
+            "display_order": 3
+          },
+          {
+            "group_name": "Nutrition",
+            "display_order": 4
+          },
+          {
+            "group_name": "Chemical",
+            "display_order": 5
+          }
+        ]
+      },
+      {
+        "doctype": "Content Category",
+        "records": [
+          {
+            "category_name": "Marketing Description"
+          },
+          {
+            "category_name": "Technical Specification"
+          },
+          {
+            "category_name": "Usage Instructions"
+          },
+          {
+            "category_name": "Safety Information"
+          }
+        ]
+      }
+    ],
+    "permissions": {
+      "roles": [
+        {
+          "role": "PIM Manager",
+          "permissions": {
+            "Product Master": [
+              "read",
+              "write",
+              "create",
+              "delete",
+              "submit"
+            ],
+            "Attribute Template": [
+              "read",
+              "write",
+              "create",
+              "delete"
+            ],
+            "Product Family": [
+              "read",
+              "write",
+              "create",
+              "delete"
+            ]
+          }
+        },
+        {
+          "role": "PIM User",
+          "permissions": {
+            "Product Master": [
+              "read",
+              "write"
+            ],
+            "Product Attribute Value": [
+              "read",
+              "write",
+              "create"
+            ],
+            "Product Content": [
+              "read",
+              "write",
+              "create"
+            ]
+          }
+        },
+        {
+          "role": "PIM Viewer",
+          "permissions": {
+            "Product Master": [
+              "read"
+            ],
+            "Product Family": [
+              "read"
+            ],
+            "Attribute": [
+              "read"
+            ]
+          }
+        }
+      ]
+    },
+    "workspace": {
+      "name": "Product Information Management",
+      "shortcuts": [
+        {
+          "type": "DocType",
+          "link_to": "Product Master",
+          "label": "Products"
+        },
+        {
+          "type": "DocType",
+          "link_to": "Product Family",
+          "label": "Families"
+        },
+        {
+          "type": "DocType",
+          "link_to": "Attribute Template",
+          "label": "Templates"
+        },
+        {
+          "type": "Report",
+          "link_to": "Product Catalog",
+          "label": "Catalog"
+        }
+      ],
+      "cards": [
+        {
+          "label": "Product Management",
+          "links": [
+            "Product Master",
+            "Product Family",
+            "Product Type",
+            "Product Variant"
+          ]
+        },
+        {
+          "label": "Attribute Engine",
+          "links": [
+            "Attribute",
+            "Attribute Group",
+            "Attribute Template"
+          ]
+        },
+        {
+          "label": "Content & Compliance",
+          "links": [
+            "Product Content",
+            "SDS Document",
+            "ECHA Pictogram"
+          ]
+        },
+        {
+          "label": "Pricing & Packaging",
+          "links": [
+            "Price Rule",
+            "Package Type",
+            "Product Package"
+          ]
+        },
+        {
+          "label": "Collaboration",
+          "links": [
+            "Product Contributor",
+            "Product Review"
+          ]
+        }
+      ]
+    },
+    "mock_data": {
+      "enabled": true,
+      "generators": {
+        "product_family": {
+          "count": 10,
+          "sectors": [
+            "Food",
+            "Cosmetics",
+            "Electronics",
+            "Chemicals"
+          ]
+        },
+        "product_master": {
+          "count": 100,
+          "with_attributes": true,
+          "with_variants": true
+        },
+        "attribute_template": {
+          "templates": [
+            "Nutrition Facts",
+            "SDS Template",
+            "Electronics Specs"
+          ]
+        }
+      }
+    },
+    "translation": {
+      "enabled": true,
+      "default_language": "tr",
+      "supported_languages": [
+        "en",
+        "tr",
+        "de",
+        "ar"
+      ],
+      "translatable_doctypes": [
+        "Product Master",
+        "Attribute",
+        "Product Content",
+        "Product Family"
+      ],
+      "ai_translation": {
+        "enabled": true,
+        "provider": "frappe_mcp"
+      }
+    },
+    "development": {
+      "debug_mode": false,
+      "log_integrations": true,
+      "test_mode": false,
+      "fixtures_auto_import": true
+    }
+  }
+  
