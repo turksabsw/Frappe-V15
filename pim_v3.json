@@ -1,0 +1,1315 @@
+{
+    "project": {
+      "name": "Frappe PIM - Enterprise Product Information Management",
+      "version": "2.0.0",
+      "description": "SAP MDG'yi geride bırakan, universal, industry-agnostic PIM sistemi. Akeneo'nun family variant modeli, Stibo STEP'in classification inheritance'ı, Informatica MDM'in golden record survivorship'ı ve Salsify'ın channel-first yaklaşımını birleştiren enterprise-grade çözüm.",
+      "frappe_version": ">=15.0.0",
+      "erpnext_version": ">=15.0.0",
+      "license": "MIT",
+      "author": "Ismail",
+      "repository": "https://github.com/user/frappe_pim"
+    },
+  
+    "architecture": {
+      "philosophy": "Write less, do more - Minimal code, maximum functionality",
+      "patterns": [
+        "Akeneo Family Variant Model - Product structure with configurable variant axes",
+        "Stibo STEP Classification Inheritance - Multi-taxonomy support",
+        "Informatica MDM XREF Pattern - Data lineage and survivorship",
+        "Salsify Channel Readiness - Commerce activation scoring",
+        "Pimcore Object Brick Pattern - Dynamic category-specific attributes",
+        "inRiver Link Entity Pattern - Rich relationship metadata"
+      ],
+      "core_principles": [
+        "API-first design with REST and GraphQL-like endpoints",
+        "Event-driven core with event sourcing for audit trails",
+        "CQRS for independent read/write scaling",
+        "Multi-dimensional scoping: locale × channel × time",
+        "Pluggable AI services for enrichment"
+      ],
+      "frappe_integration": {
+        "erpnext": "Bidirectional sync with Item, BOM, Supplier, Customer",
+        "press": "Multi-tenant deployment, site management",
+        "cloud": "Marketplace distribution, SaaS billing",
+        "insights": "Analytics and reporting dashboards",
+        "builder": "Custom page builder for product catalogs"
+      }
+    },
+  
+    "doctypes": {
+      "core_product": {
+        "Product Master": {
+          "purpose": "Ana ürün entity'si - Marketing-facing, rich content, not directly transactable",
+          "fields": [
+            {"fieldname": "product_code", "fieldtype": "Data", "unique": 1, "reqd": 1, "in_list_view": 1},
+            {"fieldname": "product_name", "fieldtype": "Data", "reqd": 1, "in_list_view": 1, "translatable": 1},
+            {"fieldname": "product_type", "fieldtype": "Link", "options": "Product Type", "reqd": 1},
+            {"fieldname": "product_family", "fieldtype": "Link", "options": "Product Family", "reqd": 1},
+            {"fieldname": "brand", "fieldtype": "Link", "options": "Brand"},
+            {"fieldname": "manufacturer", "fieldtype": "Link", "options": "Manufacturer"},
+            {"fieldname": "short_description", "fieldtype": "Text", "translatable": 1},
+            {"fieldname": "long_description", "fieldtype": "Text Editor", "translatable": 1},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Draft\nIn Review\nApproved\nPublished\nArchived", "default": "Draft"},
+            {"fieldname": "workflow_state", "fieldtype": "Link", "options": "Workflow State"},
+            {"fieldname": "golden_record", "fieldtype": "Link", "options": "Golden Record"},
+            {"fieldname": "completeness_score", "fieldtype": "Percent", "read_only": 1},
+            {"fieldname": "quality_score", "fieldtype": "Percent", "read_only": 1},
+            {"fieldname": "erpnext_item", "fieldtype": "Link", "options": "Item", "description": "ERPNext Item entegrasyonu"},
+            {"fieldname": "section_attributes", "fieldtype": "Section Break", "label": "Dynamic Attributes"},
+            {"fieldname": "attributes", "fieldtype": "Table", "options": "Product Attribute Value"},
+            {"fieldname": "section_categories", "fieldtype": "Section Break", "label": "Categories"},
+            {"fieldname": "categories", "fieldtype": "Table MultiSelect", "options": "Product Category"},
+            {"fieldname": "section_taxonomy", "fieldtype": "Section Break", "label": "Classification"},
+            {"fieldname": "classifications", "fieldtype": "Table", "options": "Product Classification"},
+            {"fieldname": "section_media", "fieldtype": "Section Break", "label": "Digital Assets"},
+            {"fieldname": "assets", "fieldtype": "Table", "options": "Product Asset Link"},
+            {"fieldname": "section_relationships", "fieldtype": "Section Break", "label": "Product Relationships"},
+            {"fieldname": "relationships", "fieldtype": "Table", "options": "Product Relationship"},
+            {"fieldname": "section_localization", "fieldtype": "Section Break", "label": "Localization"},
+            {"fieldname": "localizations", "fieldtype": "Table", "options": "Product Localization"},
+            {"fieldname": "section_channels", "fieldtype": "Section Break", "label": "Channel Readiness"},
+            {"fieldname": "channel_readiness", "fieldtype": "Table", "options": "Channel Readiness Status"}
+          ],
+          "permissions": [
+            {"role": "PIM Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+            {"role": "PIM Editor", "read": 1, "write": 1, "create": 1},
+            {"role": "PIM Viewer", "read": 1},
+            {"role": "Data Steward", "read": 1, "write": 1}
+          ],
+          "hooks": {
+            "before_save": "frappe_pim.pim.doctype.product_master.product_master.before_save",
+            "after_save": "frappe_pim.pim.doctype.product_master.product_master.after_save",
+            "on_update": "frappe_pim.pim.doctype.product_master.product_master.sync_to_erpnext",
+            "validate": "frappe_pim.pim.doctype.product_master.product_master.calculate_scores"
+          }
+        },
+  
+        "Product Variant": {
+          "purpose": "SKU seviyesi - Transactable unit with unique identifiers and inventory",
+          "fields": [
+            {"fieldname": "variant_code", "fieldtype": "Data", "unique": 1, "reqd": 1},
+            {"fieldname": "parent_product", "fieldtype": "Link", "options": "Product Master", "reqd": 1},
+            {"fieldname": "variant_level", "fieldtype": "Int", "default": 1, "description": "1=Color, 2=Size etc."},
+            {"fieldname": "parent_variant", "fieldtype": "Link", "options": "Product Variant", "description": "For multi-level variants"},
+            {"fieldname": "sku", "fieldtype": "Data", "unique": 1},
+            {"fieldname": "ean_gtin", "fieldtype": "Data", "label": "EAN/GTIN"},
+            {"fieldname": "variant_attributes", "fieldtype": "Table", "options": "Variant Attribute Value"},
+            {"fieldname": "inherit_from_parent", "fieldtype": "Check", "default": 1},
+            {"fieldname": "erpnext_item", "fieldtype": "Link", "options": "Item"},
+            {"fieldname": "pricing", "fieldtype": "Table", "options": "Variant Price"},
+            {"fieldname": "inventory", "fieldtype": "Table", "options": "Variant Inventory"}
+          ],
+          "inheritance": {
+            "enabled": true,
+            "strategy": "cascade",
+            "override_allowed": true
+          }
+        },
+  
+        "Product Type": {
+          "purpose": "Data structure template - configurable vs simple, physical vs virtual",
+          "fields": [
+            {"fieldname": "type_name", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "type_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "description", "fieldtype": "Text"},
+            {"fieldname": "is_configurable", "fieldtype": "Check", "description": "Has variants"},
+            {"fieldname": "is_virtual", "fieldtype": "Check", "description": "Digital product"},
+            {"fieldname": "is_bundle", "fieldtype": "Check", "description": "Product bundle/kit"},
+            {"fieldname": "is_service", "fieldtype": "Check"},
+            {"fieldname": "variant_axes", "fieldtype": "Table", "options": "Variant Axis Definition"},
+            {"fieldname": "max_variant_levels", "fieldtype": "Int", "default": 2},
+            {"fieldname": "erpnext_item_group", "fieldtype": "Link", "options": "Item Group"}
+          ]
+        },
+  
+        "Product Family": {
+          "purpose": "Attribute enrichment template - defines what data can and must be captured",
+          "fields": [
+            {"fieldname": "family_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "family_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "parent_family", "fieldtype": "Link", "options": "Product Family", "description": "For inheritance up to 20 levels"},
+            {"fieldname": "description", "fieldtype": "Text"},
+            {"fieldname": "attribute_groups", "fieldtype": "Table", "options": "Family Attribute Group"},
+            {"fieldname": "completeness_rules", "fieldtype": "Table", "options": "Completeness Rule"},
+            {"fieldname": "variant_family", "fieldtype": "Link", "options": "Family Variant"},
+            {"fieldname": "inheritance_level", "fieldtype": "Int", "read_only": 1, "description": "Calculated depth in hierarchy"}
+          ],
+          "inheritance": {
+            "max_depth": 20,
+            "inherit_attributes": true,
+            "inherit_completeness": true,
+            "override_allowed": true
+          }
+        },
+  
+        "Family Variant": {
+          "purpose": "Akeneo-style variant axis configuration",
+          "fields": [
+            {"fieldname": "variant_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "family", "fieldtype": "Link", "options": "Product Family", "reqd": 1},
+            {"fieldname": "variant_axes_level_1", "fieldtype": "Table", "options": "Variant Axis", "description": "e.g., Color"},
+            {"fieldname": "variant_axes_level_2", "fieldtype": "Table", "options": "Variant Axis", "description": "e.g., Size"},
+            {"fieldname": "attributes_at_root", "fieldtype": "Table", "options": "Family Attribute Assignment"},
+            {"fieldname": "attributes_at_level_1", "fieldtype": "Table", "options": "Family Attribute Assignment"},
+            {"fieldname": "attributes_at_level_2", "fieldtype": "Table", "options": "Family Attribute Assignment"}
+          ],
+          "constraints": {
+            "max_axes_per_level": 5,
+            "max_levels": 2,
+            "valid_axis_types": ["Simple Select", "Reference Entity", "Boolean", "Measurement"]
+          }
+        }
+      },
+  
+      "attributes": {
+        "Attribute": {
+          "purpose": "Attribute definition with full type system",
+          "fields": [
+            {"fieldname": "attribute_name", "fieldtype": "Data", "reqd": 1, "translatable": 1},
+            {"fieldname": "attribute_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "attribute_group", "fieldtype": "Link", "options": "Attribute Group"},
+            {"fieldname": "attribute_type", "fieldtype": "Select", "options": "Text\nTextarea\nNumber\nDecimal\nBoolean\nDate\nDatetime\nSimple Select\nMulti Select\nMeasurement\nPrice\nImage\nFile\nAsset Collection\nReference Entity\nTable\nProduct Link\nIdentifier", "reqd": 1},
+            {"fieldname": "is_localizable", "fieldtype": "Check", "description": "Varies by language"},
+            {"fieldname": "is_scopable", "fieldtype": "Check", "description": "Varies by channel"},
+            {"fieldname": "is_required", "fieldtype": "Check"},
+            {"fieldname": "is_unique", "fieldtype": "Check"},
+            {"fieldname": "is_filterable", "fieldtype": "Check"},
+            {"fieldname": "is_searchable", "fieldtype": "Check"},
+            {"fieldname": "is_comparable", "fieldtype": "Check"},
+            {"fieldname": "is_variant_axis", "fieldtype": "Check", "description": "Can be used as variant differentiator"},
+            {"fieldname": "section_type_config", "fieldtype": "Section Break", "label": "Type Configuration"},
+            {"fieldname": "select_options", "fieldtype": "Table", "options": "Attribute Option", "depends_on": "eval:['Simple Select', 'Multi Select'].includes(doc.attribute_type)"},
+            {"fieldname": "measurement_family", "fieldtype": "Link", "options": "Measurement Family", "depends_on": "eval:doc.attribute_type=='Measurement'"},
+            {"fieldname": "default_unit", "fieldtype": "Link", "options": "Unit of Measure", "depends_on": "eval:doc.attribute_type=='Measurement'"},
+            {"fieldname": "reference_entity_type", "fieldtype": "Link", "options": "Reference Entity Type", "depends_on": "eval:doc.attribute_type=='Reference Entity'"},
+            {"fieldname": "table_columns", "fieldtype": "Table", "options": "Attribute Table Column", "depends_on": "eval:doc.attribute_type=='Table'"},
+            {"fieldname": "section_validation", "fieldtype": "Section Break", "label": "Validation Rules"},
+            {"fieldname": "validation_rules", "fieldtype": "Table", "options": "Attribute Validation Rule"},
+            {"fieldname": "min_value", "fieldtype": "Float"},
+            {"fieldname": "max_value", "fieldtype": "Float"},
+            {"fieldname": "regex_pattern", "fieldtype": "Data"},
+            {"fieldname": "section_calculated", "fieldtype": "Section Break", "label": "Calculated Attribute"},
+            {"fieldname": "is_calculated", "fieldtype": "Check"},
+            {"fieldname": "calculation_formula", "fieldtype": "Code", "options": "Python", "depends_on": "eval:doc.is_calculated"},
+            {"fieldname": "dependent_attributes", "fieldtype": "Table", "options": "Dependent Attribute Link", "depends_on": "eval:doc.is_calculated"}
+          ]
+        },
+  
+        "Attribute Group": {
+          "purpose": "Logical grouping for UI organization",
+          "fields": [
+            {"fieldname": "group_name", "fieldtype": "Data", "reqd": 1, "translatable": 1},
+            {"fieldname": "group_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "sort_order", "fieldtype": "Int", "default": 0},
+            {"fieldname": "is_collapsed_default", "fieldtype": "Check"},
+            {"fieldname": "icon", "fieldtype": "Data", "description": "FontAwesome icon class"}
+          ]
+        },
+  
+        "Attribute Template": {
+          "purpose": "Reusable attribute sets for specific use cases",
+          "fields": [
+            {"fieldname": "template_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "template_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "description", "fieldtype": "Text"},
+            {"fieldname": "industry_vertical", "fieldtype": "Select", "options": "\nFashion\nElectronics\nFMCG\nIndustrial\nHealthcare\nAutomotive\nFood & Beverage"},
+            {"fieldname": "attributes", "fieldtype": "Table", "options": "Template Attribute"}
+          ]
+        },
+  
+        "Product Attribute Value": {
+          "purpose": "Child table for product attribute values with 3D scoping",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "attribute", "fieldtype": "Link", "options": "Attribute", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "locale", "fieldtype": "Link", "options": "PIM Locale", "in_list_view": 1},
+            {"fieldname": "channel", "fieldtype": "Link", "options": "Sales Channel", "in_list_view": 1},
+            {"fieldname": "value_text", "fieldtype": "Text"},
+            {"fieldname": "value_number", "fieldtype": "Float"},
+            {"fieldname": "value_boolean", "fieldtype": "Check"},
+            {"fieldname": "value_date", "fieldtype": "Date"},
+            {"fieldname": "value_select", "fieldtype": "Link", "options": "Attribute Option"},
+            {"fieldname": "value_multiselect", "fieldtype": "Table MultiSelect", "options": "Attribute Option"},
+            {"fieldname": "value_measurement", "fieldtype": "Float"},
+            {"fieldname": "measurement_unit", "fieldtype": "Link", "options": "Unit of Measure"},
+            {"fieldname": "value_reference", "fieldtype": "Dynamic Link", "options": "reference_doctype"},
+            {"fieldname": "reference_doctype", "fieldtype": "Link", "options": "DocType"},
+            {"fieldname": "value_json", "fieldtype": "JSON", "description": "For complex types like tables"},
+            {"fieldname": "is_inherited", "fieldtype": "Check", "read_only": 1},
+            {"fieldname": "inherited_from", "fieldtype": "Data", "read_only": 1}
+          ]
+        }
+      },
+  
+      "classification": {
+        "Taxonomy": {
+          "purpose": "Multi-taxonomy support - GS1 GPC, UNSPSC, eCl@ss, ETIM, Custom",
+          "fields": [
+            {"fieldname": "taxonomy_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "taxonomy_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "taxonomy_type", "fieldtype": "Select", "options": "GS1 GPC\nUNSPSC\neCl@ss\nETIM\nCustom", "reqd": 1},
+            {"fieldname": "version", "fieldtype": "Data"},
+            {"fieldname": "effective_date", "fieldtype": "Date"},
+            {"fieldname": "expiry_date", "fieldtype": "Date"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1},
+            {"fieldname": "description", "fieldtype": "Text"}
+          ]
+        },
+  
+        "Taxonomy Node": {
+          "purpose": "Hierarchical classification nodes",
+          "fields": [
+            {"fieldname": "node_name", "fieldtype": "Data", "reqd": 1, "translatable": 1},
+            {"fieldname": "node_code", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "taxonomy", "fieldtype": "Link", "options": "Taxonomy", "reqd": 1},
+            {"fieldname": "parent_node", "fieldtype": "Link", "options": "Taxonomy Node"},
+            {"fieldname": "level", "fieldtype": "Int", "read_only": 1},
+            {"fieldname": "full_path", "fieldtype": "Data", "read_only": 1},
+            {"fieldname": "assigned_attributes", "fieldtype": "Table", "options": "Node Attribute Assignment"},
+            {"fieldname": "lft", "fieldtype": "Int"},
+            {"fieldname": "rgt", "fieldtype": "Int"}
+          ],
+          "tree_structure": true,
+          "nsm_parent_field": "parent_node"
+        },
+  
+        "Taxonomy Crosswalk": {
+          "purpose": "Mapping between different classification systems",
+          "fields": [
+            {"fieldname": "source_taxonomy", "fieldtype": "Link", "options": "Taxonomy", "reqd": 1},
+            {"fieldname": "source_node", "fieldtype": "Link", "options": "Taxonomy Node", "reqd": 1},
+            {"fieldname": "target_taxonomy", "fieldtype": "Link", "options": "Taxonomy", "reqd": 1},
+            {"fieldname": "target_node", "fieldtype": "Link", "options": "Taxonomy Node", "reqd": 1},
+            {"fieldname": "mapping_type", "fieldtype": "Select", "options": "Exact\nBroader\nNarrower\nRelated\nPartial", "reqd": 1},
+            {"fieldname": "confidence_score", "fieldtype": "Percent"},
+            {"fieldname": "validated_by", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "validation_date", "fieldtype": "Date"}
+          ]
+        },
+  
+        "Product Category": {
+          "purpose": "Navigation and filtering - multiple assignments allowed",
+          "fields": [
+            {"fieldname": "category_name", "fieldtype": "Data", "reqd": 1, "translatable": 1},
+            {"fieldname": "category_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "parent_category", "fieldtype": "Link", "options": "Product Category"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1},
+            {"fieldname": "image", "fieldtype": "Attach Image"},
+            {"fieldname": "description", "fieldtype": "Text", "translatable": 1},
+            {"fieldname": "seo_title", "fieldtype": "Data", "translatable": 1},
+            {"fieldname": "seo_description", "fieldtype": "Small Text", "translatable": 1},
+            {"fieldname": "category_specific_attributes", "fieldtype": "Table", "options": "Category Attribute"},
+            {"fieldname": "erpnext_item_group", "fieldtype": "Link", "options": "Item Group"}
+          ],
+          "tree_structure": true,
+          "nsm_parent_field": "parent_category"
+        },
+  
+        "Product Classification": {
+          "purpose": "Child table linking product to taxonomy nodes",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "taxonomy", "fieldtype": "Link", "options": "Taxonomy", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "taxonomy_node", "fieldtype": "Link", "options": "Taxonomy Node", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "is_primary", "fieldtype": "Check"},
+            {"fieldname": "confidence_score", "fieldtype": "Percent"},
+            {"fieldname": "assigned_by", "fieldtype": "Select", "options": "Manual\nAI Suggested\nImported"}
+          ]
+        }
+      },
+  
+      "data_quality": {
+        "Golden Record": {
+          "purpose": "Informatica MDM-style master record with survivorship",
+          "fields": [
+            {"fieldname": "record_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "record_code", "fieldtype": "Data", "unique": 1},
+            {"fieldname": "entity_type", "fieldtype": "Select", "options": "Product Master\nBrand\nManufacturer\nSupplier", "reqd": 1},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Draft\nActive\nMerged\nObsolete", "default": "Draft"},
+            {"fieldname": "survivorship_rule", "fieldtype": "Link", "options": "Survivorship Rule", "reqd": 1},
+            {"fieldname": "merge_mode", "fieldtype": "Select", "options": "Auto Merge\nManual Review Required", "default": "Manual Review Required"},
+            {"fieldname": "data_steward", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "validation_status", "fieldtype": "Select", "options": "Pending\nValidated\nRejected"},
+            {"fieldname": "section_sources", "fieldtype": "Section Break", "label": "Source Records"},
+            {"fieldname": "source_records", "fieldtype": "Table", "options": "Golden Record Source"},
+            {"fieldname": "section_history", "fieldtype": "Section Break", "label": "Merge History"},
+            {"fieldname": "merge_count", "fieldtype": "Int", "read_only": 1, "default": 0},
+            {"fieldname": "merge_history", "fieldtype": "Table", "options": "Merge History Entry"},
+            {"fieldname": "notes", "fieldtype": "Text"}
+          ]
+        },
+  
+        "Survivorship Rule": {
+          "purpose": "Attribute-level rules for golden record creation",
+          "fields": [
+            {"fieldname": "rule_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "rule_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "description", "fieldtype": "Text"},
+            {"fieldname": "default_strategy", "fieldtype": "Select", "options": "Source Priority\nMost Recent\nMost Complete\nHighest Quality Score\nLongest String\nManual", "reqd": 1},
+            {"fieldname": "attribute_rules", "fieldtype": "Table", "options": "Attribute Survivorship Rule"}
+          ]
+        },
+  
+        "Attribute Survivorship Rule": {
+          "purpose": "Per-attribute survivorship configuration",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "attribute", "fieldtype": "Link", "options": "Attribute", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "strategy", "fieldtype": "Select", "options": "Source Priority\nMost Recent\nMost Complete\nHighest Quality Score\nLongest String\nManual", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "source_priority", "fieldtype": "Table", "options": "Source Priority Entry"},
+            {"fieldname": "fallback_strategy", "fieldtype": "Select", "options": "\nSource Priority\nMost Recent\nMost Complete"}
+          ]
+        },
+  
+        "Golden Record Source": {
+          "purpose": "Child table for source record references with XREF pattern",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "source_system", "fieldtype": "Link", "options": "Source System", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "source_record", "fieldtype": "Dynamic Link", "options": "source_doctype", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "source_doctype", "fieldtype": "Link", "options": "DocType", "reqd": 1},
+            {"fieldname": "source_id", "fieldtype": "Data", "description": "Original ID in source system"},
+            {"fieldname": "confidence_score", "fieldtype": "Percent", "in_list_view": 1},
+            {"fieldname": "is_primary", "fieldtype": "Check", "in_list_view": 1},
+            {"fieldname": "last_sync", "fieldtype": "Datetime"},
+            {"fieldname": "trust_score", "fieldtype": "Percent", "description": "Configurable trust decay"}
+          ]
+        },
+  
+        "Source System": {
+          "purpose": "External data sources with trust configuration",
+          "fields": [
+            {"fieldname": "system_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "system_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "system_type", "fieldtype": "Select", "options": "ERP\nE-Commerce\nSupplier Portal\nMarketplace\nManual Entry\nImport\nAPI", "reqd": 1},
+            {"fieldname": "base_trust_score", "fieldtype": "Percent", "default": 50},
+            {"fieldname": "trust_decay_rate", "fieldtype": "Float", "description": "Per day decay percentage"},
+            {"fieldname": "api_endpoint", "fieldtype": "Data"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "Data Quality Rule": {
+          "purpose": "Validation, transformation, and enrichment rules",
+          "fields": [
+            {"fieldname": "rule_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "rule_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "rule_type", "fieldtype": "Select", "options": "Validation\nTransformation\nEnrichment", "reqd": 1},
+            {"fieldname": "applies_to", "fieldtype": "Select", "options": "All Products\nProduct Family\nProduct Type\nCategory", "reqd": 1},
+            {"fieldname": "filter_value", "fieldtype": "Dynamic Link", "options": "filter_doctype"},
+            {"fieldname": "filter_doctype", "fieldtype": "Link", "options": "DocType"},
+            {"fieldname": "target_attribute", "fieldtype": "Link", "options": "Attribute"},
+            {"fieldname": "execution_timing", "fieldtype": "Select", "options": "On Save\nBatch\nReal-time\nPre-import", "reqd": 1},
+            {"fieldname": "severity", "fieldtype": "Select", "options": "Information\nWarning\nError\nCritical", "default": "Warning"},
+            {"fieldname": "rule_logic", "fieldtype": "Code", "options": "Python"},
+            {"fieldname": "error_message", "fieldtype": "Data", "translatable": 1},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "Completeness Rule": {
+          "purpose": "Channel-specific completeness requirements",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "channel", "fieldtype": "Link", "options": "Sales Channel", "in_list_view": 1},
+            {"fieldname": "locale", "fieldtype": "Link", "options": "PIM Locale"},
+            {"fieldname": "required_attributes", "fieldtype": "Table MultiSelect", "options": "Attribute"},
+            {"fieldname": "minimum_completeness", "fieldtype": "Percent", "default": 100},
+            {"fieldname": "weighted_scoring", "fieldtype": "Check"},
+            {"fieldname": "attribute_weights", "fieldtype": "JSON", "depends_on": "eval:doc.weighted_scoring"}
+          ]
+        },
+  
+        "Duplicate Detection Rule": {
+          "purpose": "Match rules for duplicate identification",
+          "fields": [
+            {"fieldname": "rule_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "entity_type", "fieldtype": "Select", "options": "Product Master\nBrand\nManufacturer\nSupplier", "reqd": 1},
+            {"fieldname": "matching_type", "fieldtype": "Select", "options": "Deterministic\nProbabilistic\nFuzzy", "reqd": 1},
+            {"fieldname": "match_attributes", "fieldtype": "Table", "options": "Match Attribute Config"},
+            {"fieldname": "match_threshold", "fieldtype": "Percent", "default": 80},
+            {"fieldname": "possible_match_threshold", "fieldtype": "Percent", "default": 60},
+            {"fieldname": "auto_merge_threshold", "fieldtype": "Percent", "default": 95}
+          ]
+        },
+  
+        "Match Attribute Config": {
+          "purpose": "Per-attribute matching configuration",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "attribute", "fieldtype": "Link", "options": "Attribute", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "match_algorithm", "fieldtype": "Select", "options": "Exact\nLevenshtein\nJaro-Winkler\nSoundex\nN-Gram", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "weight", "fieldtype": "Percent", "default": 100, "in_list_view": 1},
+            {"fieldname": "threshold", "fieldtype": "Percent", "default": 80}
+          ]
+        }
+      },
+  
+      "workflow": {
+        "PIM Workflow": {
+          "purpose": "Multi-stage approval workflows with state machine",
+          "fields": [
+            {"fieldname": "workflow_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "workflow_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "applies_to", "fieldtype": "Link", "options": "DocType", "reqd": 1},
+            {"fieldname": "workflow_type", "fieldtype": "Select", "options": "One-time\nContinuous", "reqd": 1},
+            {"fieldname": "states", "fieldtype": "Table", "options": "Workflow State Config"},
+            {"fieldname": "transitions", "fieldtype": "Table", "options": "Workflow Transition Config"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "Workflow State Config": {
+          "purpose": "State configuration with field-level permissions",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "state_name", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "state_type", "fieldtype": "Select", "options": "Draft\nIn Progress\nReview\nApproved\nPublished\nArchived", "reqd": 1},
+            {"fieldname": "editable_attribute_groups", "fieldtype": "Table MultiSelect", "options": "Attribute Group"},
+            {"fieldname": "assigned_role", "fieldtype": "Link", "options": "Role"},
+            {"fieldname": "sla_hours", "fieldtype": "Int", "description": "Hours before escalation"},
+            {"fieldname": "escalation_role", "fieldtype": "Link", "options": "Role"}
+          ]
+        },
+  
+        "Workflow Transition Config": {
+          "purpose": "State transitions with conditions",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "from_state", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "to_state", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "action_name", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "allowed_roles", "fieldtype": "Table MultiSelect", "options": "Role"},
+            {"fieldname": "condition", "fieldtype": "Code", "options": "Python"},
+            {"fieldname": "require_comment", "fieldtype": "Check"},
+            {"fieldname": "send_notification", "fieldtype": "Check"}
+          ]
+        },
+  
+        "Workflow Task": {
+          "purpose": "Individual workflow tasks with assignment",
+          "fields": [
+            {"fieldname": "task_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "workflow", "fieldtype": "Link", "options": "PIM Workflow", "reqd": 1},
+            {"fieldname": "reference_doctype", "fieldtype": "Link", "options": "DocType", "reqd": 1},
+            {"fieldname": "reference_name", "fieldtype": "Dynamic Link", "options": "reference_doctype", "reqd": 1},
+            {"fieldname": "current_state", "fieldtype": "Data"},
+            {"fieldname": "assigned_to", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "assigned_role", "fieldtype": "Link", "options": "Role"},
+            {"fieldname": "assignment_type", "fieldtype": "Select", "options": "Round Robin\nSkill Based\nCapacity Based\nDynamic"},
+            {"fieldname": "due_date", "fieldtype": "Datetime"},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Pending\nIn Progress\nCompleted\nEscalated\nCancelled"},
+            {"fieldname": "completed_by", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "completed_on", "fieldtype": "Datetime"},
+            {"fieldname": "comment", "fieldtype": "Text"}
+          ]
+        }
+      },
+  
+      "channels": {
+        "Sales Channel": {
+          "purpose": "Output channels with specific requirements",
+          "fields": [
+            {"fieldname": "channel_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "channel_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "channel_type", "fieldtype": "Select", "options": "E-Commerce\nMarketplace\nMobile App\nPOS\nPrint Catalog\nB2B Portal", "reqd": 1},
+            {"fieldname": "default_locale", "fieldtype": "Link", "options": "PIM Locale"},
+            {"fieldname": "supported_locales", "fieldtype": "Table MultiSelect", "options": "PIM Locale"},
+            {"fieldname": "measurement_system", "fieldtype": "Select", "options": "Metric\nImperial"},
+            {"fieldname": "currency", "fieldtype": "Link", "options": "Currency"},
+            {"fieldname": "required_attributes", "fieldtype": "Table", "options": "Channel Required Attribute"},
+            {"fieldname": "export_format", "fieldtype": "Select", "options": "JSON\nXML\nCSV\nFeed"},
+            {"fieldname": "api_endpoint", "fieldtype": "Data"},
+            {"fieldname": "webhook_url", "fieldtype": "Data"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "Channel Readiness Status": {
+          "purpose": "Per-channel completeness and readiness tracking",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "channel", "fieldtype": "Link", "options": "Sales Channel", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "locale", "fieldtype": "Link", "options": "PIM Locale", "in_list_view": 1},
+            {"fieldname": "completeness", "fieldtype": "Percent", "read_only": 1, "in_list_view": 1},
+            {"fieldname": "is_ready", "fieldtype": "Check", "read_only": 1, "in_list_view": 1},
+            {"fieldname": "missing_attributes", "fieldtype": "JSON", "read_only": 1},
+            {"fieldname": "last_published", "fieldtype": "Datetime"},
+            {"fieldname": "publish_status", "fieldtype": "Select", "options": "Not Published\nPublished\nPending Update\nError"}
+          ]
+        },
+  
+        "PIM Locale": {
+          "purpose": "Language/region configuration with fallback chains",
+          "fields": [
+            {"fieldname": "locale_code", "fieldtype": "Data", "reqd": 1, "unique": 1, "description": "e.g., en_US, tr_TR"},
+            {"fieldname": "locale_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "language", "fieldtype": "Link", "options": "Language", "reqd": 1},
+            {"fieldname": "country", "fieldtype": "Link", "options": "Country"},
+            {"fieldname": "fallback_locale", "fieldtype": "Link", "options": "PIM Locale"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1},
+            {"fieldname": "is_default", "fieldtype": "Check"}
+          ],
+          "fallback_chain_example": "de_AT → de_DE → en_US"
+        },
+  
+        "Product Localization": {
+          "purpose": "Locale-specific product content",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "locale", "fieldtype": "Link", "options": "PIM Locale", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "localized_name", "fieldtype": "Data", "in_list_view": 1},
+            {"fieldname": "localized_description", "fieldtype": "Text Editor"},
+            {"fieldname": "seo_title", "fieldtype": "Data"},
+            {"fieldname": "seo_description", "fieldtype": "Small Text"},
+            {"fieldname": "seo_keywords", "fieldtype": "Data"},
+            {"fieldname": "translation_status", "fieldtype": "Select", "options": "Not Started\nIn Progress\nCompleted\nNeeds Review"},
+            {"fieldname": "translated_by", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "translation_date", "fieldtype": "Date"}
+          ]
+        }
+      },
+  
+      "dam": {
+        "Digital Asset": {
+          "purpose": "Centralized digital asset management",
+          "fields": [
+            {"fieldname": "asset_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "asset_code", "fieldtype": "Data", "unique": 1},
+            {"fieldname": "asset_type", "fieldtype": "Select", "options": "Image\nVideo\nDocument\n3D Model\nAudio", "reqd": 1},
+            {"fieldname": "file", "fieldtype": "Attach"},
+            {"fieldname": "file_url", "fieldtype": "Data", "read_only": 1},
+            {"fieldname": "file_size", "fieldtype": "Int", "read_only": 1},
+            {"fieldname": "mime_type", "fieldtype": "Data", "read_only": 1},
+            {"fieldname": "width", "fieldtype": "Int"},
+            {"fieldname": "height", "fieldtype": "Int"},
+            {"fieldname": "duration", "fieldtype": "Float", "description": "For video/audio"},
+            {"fieldname": "section_metadata", "fieldtype": "Section Break", "label": "Metadata"},
+            {"fieldname": "alt_text", "fieldtype": "Data", "translatable": 1},
+            {"fieldname": "caption", "fieldtype": "Data", "translatable": 1},
+            {"fieldname": "tags", "fieldtype": "Table MultiSelect", "options": "Asset Tag"},
+            {"fieldname": "section_rights", "fieldtype": "Section Break", "label": "Rights Management"},
+            {"fieldname": "copyright_holder", "fieldtype": "Data"},
+            {"fieldname": "license_type", "fieldtype": "Select", "options": "Owned\nLicensed\nRoyalty Free\nCreative Commons"},
+            {"fieldname": "usage_restrictions", "fieldtype": "Table MultiSelect", "options": "Usage Restriction"},
+            {"fieldname": "effective_date", "fieldtype": "Date"},
+            {"fieldname": "expiry_date", "fieldtype": "Date"},
+            {"fieldname": "max_impressions", "fieldtype": "Int"},
+            {"fieldname": "current_impressions", "fieldtype": "Int", "read_only": 1},
+            {"fieldname": "section_renditions", "fieldtype": "Section Break", "label": "Renditions"},
+            {"fieldname": "renditions", "fieldtype": "Table", "options": "Asset Rendition"}
+          ]
+        },
+  
+        "Asset Rendition": {
+          "purpose": "Auto-generated asset variations",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "rendition_name", "fieldtype": "Data", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "rendition_type", "fieldtype": "Select", "options": "Thumbnail\nMedium\nLarge\nOriginal\nWebP\nCustom", "in_list_view": 1},
+            {"fieldname": "width", "fieldtype": "Int", "in_list_view": 1},
+            {"fieldname": "height", "fieldtype": "Int", "in_list_view": 1},
+            {"fieldname": "quality", "fieldtype": "Int", "default": 85},
+            {"fieldname": "format", "fieldtype": "Select", "options": "JPEG\nPNG\nWebP\nAVIF"},
+            {"fieldname": "file_url", "fieldtype": "Data", "read_only": 1},
+            {"fieldname": "file_size", "fieldtype": "Int", "read_only": 1}
+          ]
+        },
+  
+        "Product Asset Link": {
+          "purpose": "Rich product-to-asset relationships (inRiver pattern)",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "asset", "fieldtype": "Link", "options": "Digital Asset", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "usage_type", "fieldtype": "Select", "options": "Hero\nThumbnail\nGallery\nLifestyle\nDetail\nSwatch\nVideo\nDocument\n3D", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "sort_order", "fieldtype": "Int", "default": 0, "in_list_view": 1},
+            {"fieldname": "is_primary", "fieldtype": "Check", "in_list_view": 1},
+            {"fieldname": "locale", "fieldtype": "Link", "options": "PIM Locale"},
+            {"fieldname": "channel", "fieldtype": "Link", "options": "Sales Channel"}
+          ]
+        }
+      },
+  
+      "relationships": {
+        "Relationship Type": {
+          "purpose": "Configurable product relationship types",
+          "fields": [
+            {"fieldname": "type_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "type_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "relationship_category", "fieldtype": "Select", "options": "Cross-sell\nUpsell\nAccessory\nReplacement\nSupersession\nCompatible\nRequired\nBOM Component\nCustom", "reqd": 1},
+            {"fieldname": "is_bidirectional", "fieldtype": "Check"},
+            {"fieldname": "cardinality", "fieldtype": "Select", "options": "One-to-One\nOne-to-Many\nMany-to-Many", "reqd": 1},
+            {"fieldname": "inverse_type", "fieldtype": "Link", "options": "Relationship Type", "description": "For bidirectional relationships"}
+          ]
+        },
+  
+        "Product Relationship": {
+          "purpose": "Product-to-product relationships with metadata",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "relationship_type", "fieldtype": "Link", "options": "Relationship Type", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "related_product", "fieldtype": "Link", "options": "Product Master", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "sort_order", "fieldtype": "Int", "default": 0},
+            {"fieldname": "quantity", "fieldtype": "Float", "description": "For BOM relationships"},
+            {"fieldname": "is_required", "fieldtype": "Check"},
+            {"fieldname": "effective_date", "fieldtype": "Date"},
+            {"fieldname": "expiry_date", "fieldtype": "Date"},
+            {"fieldname": "notes", "fieldtype": "Small Text"}
+          ]
+        },
+  
+        "BOM Integration": {
+          "purpose": "Bill of Materials integration with ERPNext",
+          "fields": [
+            {"fieldname": "bom_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "product", "fieldtype": "Link", "options": "Product Master", "reqd": 1},
+            {"fieldname": "bom_type", "fieldtype": "Select", "options": "eBOM (Engineering)\nmBOM (Manufacturing)\nsBOM (Sales)\ncBOM (Configurable)", "reqd": 1},
+            {"fieldname": "erpnext_bom", "fieldtype": "Link", "options": "BOM"},
+            {"fieldname": "version", "fieldtype": "Data"},
+            {"fieldname": "effective_date", "fieldtype": "Date"},
+            {"fieldname": "components", "fieldtype": "Table", "options": "BOM Component"},
+            {"fieldname": "total_cost", "fieldtype": "Currency", "read_only": 1},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "BOM Component": {
+          "purpose": "BOM component with configuration rules",
+          "istable": 1,
+          "fields": [
+            {"fieldname": "component_product", "fieldtype": "Link", "options": "Product Master", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "quantity", "fieldtype": "Float", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "uom", "fieldtype": "Link", "options": "UOM", "reqd": 1},
+            {"fieldname": "is_optional", "fieldtype": "Check"},
+            {"fieldname": "configuration_group", "fieldtype": "Data", "description": "For cBOM"},
+            {"fieldname": "inclusion_rule", "fieldtype": "Code", "options": "Python", "description": "When to include"},
+            {"fieldname": "position", "fieldtype": "Int"},
+            {"fieldname": "notes", "fieldtype": "Small Text"}
+          ]
+        }
+      },
+  
+      "supplier": {
+        "Supplier Portal User": {
+          "purpose": "Supplier users for data submission",
+          "fields": [
+            {"fieldname": "user", "fieldtype": "Link", "options": "User", "reqd": 1},
+            {"fieldname": "supplier", "fieldtype": "Link", "options": "Supplier", "reqd": 1},
+            {"fieldname": "portal_role", "fieldtype": "Select", "options": "Viewer\nEditor\nAdmin", "reqd": 1},
+            {"fieldname": "allowed_categories", "fieldtype": "Table MultiSelect", "options": "Product Category"},
+            {"fieldname": "data_templates", "fieldtype": "Table MultiSelect", "options": "Attribute Template"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1}
+          ]
+        },
+  
+        "Supplier Submission": {
+          "purpose": "Product data submissions from suppliers",
+          "fields": [
+            {"fieldname": "submission_code", "fieldtype": "Data", "unique": 1},
+            {"fieldname": "supplier", "fieldtype": "Link", "options": "Supplier", "reqd": 1},
+            {"fieldname": "submitted_by", "fieldtype": "Link", "options": "User", "reqd": 1},
+            {"fieldname": "submission_date", "fieldtype": "Datetime"},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Draft\nSubmitted\nValidating\nValidation Failed\nPending Review\nApproved\nRejected\nImported", "default": "Draft"},
+            {"fieldname": "products", "fieldtype": "Table", "options": "Supplier Product Submission"},
+            {"fieldname": "validation_errors", "fieldtype": "JSON", "read_only": 1},
+            {"fieldname": "quality_score", "fieldtype": "Percent", "read_only": 1},
+            {"fieldname": "reviewed_by", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "review_date", "fieldtype": "Datetime"},
+            {"fieldname": "review_notes", "fieldtype": "Text"}
+          ]
+        },
+  
+        "Supplier Quality Score": {
+          "purpose": "Vendor data quality tracking",
+          "fields": [
+            {"fieldname": "supplier", "fieldtype": "Link", "options": "Supplier", "reqd": 1},
+            {"fieldname": "period", "fieldtype": "Select", "options": "Monthly\nQuarterly\nYearly", "reqd": 1},
+            {"fieldname": "period_start", "fieldtype": "Date", "reqd": 1},
+            {"fieldname": "completeness_score", "fieldtype": "Percent"},
+            {"fieldname": "accuracy_score", "fieldtype": "Percent"},
+            {"fieldname": "timeliness_score", "fieldtype": "Percent"},
+            {"fieldname": "consistency_score", "fieldtype": "Percent"},
+            {"fieldname": "richness_score", "fieldtype": "Percent"},
+            {"fieldname": "overall_score", "fieldtype": "Percent", "read_only": 1},
+            {"fieldname": "submissions_count", "fieldtype": "Int"},
+            {"fieldname": "rejection_count", "fieldtype": "Int"}
+          ]
+        }
+      },
+  
+      "reference_entities": {
+        "Brand": {
+          "purpose": "Rich brand entity (Akeneo Reference Entity pattern)",
+          "fields": [
+            {"fieldname": "brand_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "brand_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "logo", "fieldtype": "Attach Image"},
+            {"fieldname": "description", "fieldtype": "Text Editor", "translatable": 1},
+            {"fieldname": "country_of_origin", "fieldtype": "Link", "options": "Country"},
+            {"fieldname": "website", "fieldtype": "Data"},
+            {"fieldname": "founded_year", "fieldtype": "Int"},
+            {"fieldname": "brand_values", "fieldtype": "Table", "options": "Brand Value"},
+            {"fieldname": "social_links", "fieldtype": "Table", "options": "Social Link"},
+            {"fieldname": "erpnext_brand", "fieldtype": "Link", "options": "Brand"}
+          ]
+        },
+  
+        "Manufacturer": {
+          "purpose": "Manufacturer entity with compliance tracking",
+          "fields": [
+            {"fieldname": "manufacturer_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "manufacturer_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "gln", "fieldtype": "Data", "label": "GLN (Global Location Number)"},
+            {"fieldname": "country", "fieldtype": "Link", "options": "Country"},
+            {"fieldname": "address", "fieldtype": "Text"},
+            {"fieldname": "certifications", "fieldtype": "Table", "options": "Manufacturer Certification"},
+            {"fieldname": "erpnext_manufacturer", "fieldtype": "Link", "options": "Manufacturer"}
+          ]
+        },
+  
+        "Reference Entity Type": {
+          "purpose": "Dynamic reference entity definitions",
+          "fields": [
+            {"fieldname": "entity_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "entity_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "linked_doctype", "fieldtype": "Link", "options": "DocType"},
+            {"fieldname": "attributes", "fieldtype": "Table", "options": "Reference Entity Attribute"}
+          ]
+        }
+      },
+  
+      "ai": {
+        "AI Enrichment Job": {
+          "purpose": "AI-powered attribute extraction and enrichment",
+          "fields": [
+            {"fieldname": "job_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "job_type", "fieldtype": "Select", "options": "Attribute Extraction\nDescription Generation\nImage Recognition\nCategory Suggestion\nDuplicate Detection\nTranslation", "reqd": 1},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Queued\nProcessing\nCompleted\nFailed", "default": "Queued"},
+            {"fieldname": "target_products", "fieldtype": "Table", "options": "AI Job Target Product"},
+            {"fieldname": "ai_model", "fieldtype": "Select", "options": "Claude\nGPT-4\nGemini\nCustom"},
+            {"fieldname": "prompt_template", "fieldtype": "Link", "options": "AI Prompt Template"},
+            {"fieldname": "results", "fieldtype": "JSON", "read_only": 1},
+            {"fieldname": "processed_count", "fieldtype": "Int", "read_only": 1},
+            {"fieldname": "error_count", "fieldtype": "Int", "read_only": 1},
+            {"fieldname": "started_at", "fieldtype": "Datetime"},
+            {"fieldname": "completed_at", "fieldtype": "Datetime"}
+          ]
+        },
+  
+        "AI Prompt Template": {
+          "purpose": "Reusable AI prompt templates",
+          "fields": [
+            {"fieldname": "template_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "template_code", "fieldtype": "Data", "reqd": 1, "unique": 1},
+            {"fieldname": "purpose", "fieldtype": "Select", "options": "Attribute Extraction\nDescription Generation\nSEO Optimization\nTranslation\nCategorization"},
+            {"fieldname": "system_prompt", "fieldtype": "Code", "options": "Markdown"},
+            {"fieldname": "user_prompt_template", "fieldtype": "Code", "options": "Markdown"},
+            {"fieldname": "output_format", "fieldtype": "Select", "options": "JSON\nText\nMarkdown"},
+            {"fieldname": "target_attributes", "fieldtype": "Table MultiSelect", "options": "Attribute"}
+          ]
+        },
+  
+        "AI Approval Queue": {
+          "purpose": "Human review for AI-generated content",
+          "fields": [
+            {"fieldname": "product", "fieldtype": "Link", "options": "Product Master", "reqd": 1},
+            {"fieldname": "enrichment_job", "fieldtype": "Link", "options": "AI Enrichment Job"},
+            {"fieldname": "attribute", "fieldtype": "Link", "options": "Attribute", "reqd": 1},
+            {"fieldname": "original_value", "fieldtype": "Text"},
+            {"fieldname": "suggested_value", "fieldtype": "Text"},
+            {"fieldname": "confidence_score", "fieldtype": "Percent"},
+            {"fieldname": "status", "fieldtype": "Select", "options": "Pending\nApproved\nRejected\nModified", "default": "Pending"},
+            {"fieldname": "reviewed_by", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "review_date", "fieldtype": "Datetime"},
+            {"fieldname": "final_value", "fieldtype": "Text"}
+          ]
+        }
+      },
+  
+      "integration": {
+        "PIM Event": {
+          "purpose": "Event sourcing for audit trails",
+          "fields": [
+            {"fieldname": "event_id", "fieldtype": "Data", "unique": 1},
+            {"fieldname": "event_type", "fieldtype": "Select", "options": "Product Created\nProduct Updated\nProduct Published\nProduct Unpublished\nCategory Changed\nAsset Linked\nWorkflow Transition\nMerge Executed\nImport Completed\nExport Completed", "reqd": 1},
+            {"fieldname": "entity_type", "fieldtype": "Link", "options": "DocType", "reqd": 1},
+            {"fieldname": "entity_name", "fieldtype": "Dynamic Link", "options": "entity_type", "reqd": 1},
+            {"fieldname": "timestamp", "fieldtype": "Datetime", "reqd": 1},
+            {"fieldname": "user", "fieldtype": "Link", "options": "User"},
+            {"fieldname": "changes", "fieldtype": "JSON"},
+            {"fieldname": "snapshot", "fieldtype": "JSON"},
+            {"fieldname": "correlation_id", "fieldtype": "Data", "description": "For tracking related events"}
+          ]
+        },
+  
+        "Webhook Configuration": {
+          "purpose": "Outbound webhook setup",
+          "fields": [
+            {"fieldname": "webhook_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "endpoint_url", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "events", "fieldtype": "Table MultiSelect", "options": "PIM Event Type"},
+            {"fieldname": "secret_key", "fieldtype": "Password"},
+            {"fieldname": "is_active", "fieldtype": "Check", "default": 1},
+            {"fieldname": "retry_count", "fieldtype": "Int", "default": 3},
+            {"fieldname": "retry_interval", "fieldtype": "Int", "default": 60, "description": "Seconds"}
+          ]
+        },
+  
+        "Import Configuration": {
+          "purpose": "Data import profiles",
+          "fields": [
+            {"fieldname": "config_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "source_type", "fieldtype": "Select", "options": "CSV\nExcel\nXML\nJSON\nAPI\nGDSN", "reqd": 1},
+            {"fieldname": "target_doctype", "fieldtype": "Link", "options": "DocType", "reqd": 1},
+            {"fieldname": "field_mapping", "fieldtype": "Table", "options": "Import Field Mapping"},
+            {"fieldname": "transformation_rules", "fieldtype": "JSON"},
+            {"fieldname": "validation_rules", "fieldtype": "Table", "options": "Import Validation Rule"},
+            {"fieldname": "duplicate_handling", "fieldtype": "Select", "options": "Skip\nUpdate\nCreate New\nMerge"},
+            {"fieldname": "source_system", "fieldtype": "Link", "options": "Source System"}
+          ]
+        },
+  
+        "Export Configuration": {
+          "purpose": "Channel export profiles",
+          "fields": [
+            {"fieldname": "config_name", "fieldtype": "Data", "reqd": 1},
+            {"fieldname": "channel", "fieldtype": "Link", "options": "Sales Channel", "reqd": 1},
+            {"fieldname": "export_format", "fieldtype": "Select", "options": "JSON\nXML\nCSV\nCustom Feed", "reqd": 1},
+            {"fieldname": "included_attributes", "fieldtype": "Table", "options": "Export Attribute Mapping"},
+            {"fieldname": "filters", "fieldtype": "JSON"},
+            {"fieldname": "schedule", "fieldtype": "Select", "options": "Manual\nHourly\nDaily\nWeekly\nReal-time"},
+            {"fieldname": "last_export", "fieldtype": "Datetime", "read_only": 1}
+          ]
+        }
+      },
+  
+      "settings": {
+        "PIM Settings": {
+          "purpose": "Global PIM configuration",
+          "issingle": 1,
+          "fields": [
+            {"fieldname": "section_general", "fieldtype": "Section Break", "label": "General Settings"},
+            {"fieldname": "default_locale", "fieldtype": "Link", "options": "PIM Locale"},
+            {"fieldname": "default_channel", "fieldtype": "Link", "options": "Sales Channel"},
+            {"fieldname": "product_code_prefix", "fieldtype": "Data", "default": "PROD"},
+            {"fieldname": "auto_generate_codes", "fieldtype": "Check", "default": 1},
+            {"fieldname": "section_completeness", "fieldtype": "Section Break", "label": "Completeness Settings"},
+            {"fieldname": "minimum_completeness_for_publish", "fieldtype": "Percent", "default": 80},
+            {"fieldname": "enable_weighted_completeness", "fieldtype": "Check"},
+            {"fieldname": "section_quality", "fieldtype": "Section Break", "label": "Data Quality"},
+            {"fieldname": "enable_duplicate_detection", "fieldtype": "Check", "default": 1},
+            {"fieldname": "auto_create_golden_records", "fieldtype": "Check"},
+            {"fieldname": "default_survivorship_rule", "fieldtype": "Link", "options": "Survivorship Rule"},
+            {"fieldname": "section_ai", "fieldtype": "Section Break", "label": "AI Settings"},
+            {"fieldname": "enable_ai_enrichment", "fieldtype": "Check"},
+            {"fieldname": "ai_provider", "fieldtype": "Select", "options": "\nClaude\nOpenAI\nGoogle AI"},
+            {"fieldname": "ai_api_key", "fieldtype": "Password"},
+            {"fieldname": "auto_approve_high_confidence", "fieldtype": "Check"},
+            {"fieldname": "confidence_threshold", "fieldtype": "Percent", "default": 90},
+            {"fieldname": "section_erpnext", "fieldtype": "Section Break", "label": "ERPNext Integration"},
+            {"fieldname": "enable_erpnext_sync", "fieldtype": "Check", "default": 1},
+            {"fieldname": "sync_direction", "fieldtype": "Select", "options": "PIM to ERPNext\nERPNext to PIM\nBidirectional"},
+            {"fieldname": "sync_on_save", "fieldtype": "Check"},
+            {"fieldname": "sync_schedule", "fieldtype": "Select", "options": "Real-time\nHourly\nDaily"},
+            {"fieldname": "default_item_group", "fieldtype": "Link", "options": "Item Group"},
+            {"fieldname": "create_variants_as_items", "fieldtype": "Check"},
+            {"fieldname": "section_dam", "fieldtype": "Section Break", "label": "DAM Settings"},
+            {"fieldname": "dam_mode", "fieldtype": "Select", "options": "Embedded\nExternal (Cloudinary)\nExternal (S3)"},
+            {"fieldname": "auto_generate_renditions", "fieldtype": "Check"},
+            {"fieldname": "rendition_presets", "fieldtype": "JSON"}
+          ]
+        }
+      }
+    },
+  
+    "erpnext_integration": {
+      "hooks": {
+        "doc_events": {
+          "Item": {
+            "after_insert": "frappe_pim.integrations.erpnext.item.create_product_from_item",
+            "on_update": "frappe_pim.integrations.erpnext.item.sync_item_to_product",
+            "on_trash": "frappe_pim.integrations.erpnext.item.unlink_product"
+          },
+          "BOM": {
+            "after_insert": "frappe_pim.integrations.erpnext.bom.create_bom_integration",
+            "on_update": "frappe_pim.integrations.erpnext.bom.sync_bom"
+          },
+          "Supplier": {
+            "after_insert": "frappe_pim.integrations.erpnext.supplier.create_supplier_portal_config"
+          },
+          "Item Group": {
+            "after_insert": "frappe_pim.integrations.erpnext.category.sync_category",
+            "on_update": "frappe_pim.integrations.erpnext.category.sync_category"
+          },
+          "Brand": {
+            "after_insert": "frappe_pim.integrations.erpnext.brand.sync_brand",
+            "on_update": "frappe_pim.integrations.erpnext.brand.sync_brand"
+          }
+        }
+      },
+      "field_mapping": {
+        "Item_to_Product": {
+          "item_code": "product_code",
+          "item_name": "product_name",
+          "item_group": "categories",
+          "brand": "brand",
+          "description": "short_description",
+          "stock_uom": "base_uom",
+          "has_variants": "product_type.is_configurable",
+          "variant_of": "parent_product"
+        },
+        "Product_to_Item": {
+          "product_code": "item_code",
+          "product_name": "item_name",
+          "brand.erpnext_brand": "brand",
+          "short_description": "description"
+        }
+      },
+      "sync_strategy": {
+        "conflict_resolution": "PIM_wins",
+        "attribute_to_item_attribute_mapping": true,
+        "variant_creation": "auto",
+        "stock_sync": false,
+        "price_sync": "ERPNext_to_PIM"
+      }
+    },
+  
+    "apis": {
+      "rest": {
+        "base_path": "/api/method/frappe_pim.api",
+        "endpoints": [
+          {
+            "path": "/products",
+            "methods": ["GET", "POST"],
+            "description": "List/Create products"
+          },
+          {
+            "path": "/products/{name}",
+            "methods": ["GET", "PATCH", "DELETE"],
+            "description": "Get/Update/Delete product"
+          },
+          {
+            "path": "/products/{name}/variants",
+            "methods": ["GET", "POST"],
+            "description": "List/Create variants"
+          },
+          {
+            "path": "/products/{name}/publish/{channel}",
+            "methods": ["POST"],
+            "description": "Publish to channel"
+          },
+          {
+            "path": "/products/{name}/completeness",
+            "methods": ["GET"],
+            "description": "Get completeness scores"
+          },
+          {
+            "path": "/products/search",
+            "methods": ["POST"],
+            "description": "Advanced product search"
+          },
+          {
+            "path": "/products/bulk",
+            "methods": ["POST", "PATCH"],
+            "description": "Bulk operations"
+          },
+          {
+            "path": "/families",
+            "methods": ["GET", "POST"],
+            "description": "Product families"
+          },
+          {
+            "path": "/attributes",
+            "methods": ["GET", "POST"],
+            "description": "Attribute definitions"
+          },
+          {
+            "path": "/categories",
+            "methods": ["GET", "POST"],
+            "description": "Category tree"
+          },
+          {
+            "path": "/assets",
+            "methods": ["GET", "POST"],
+            "description": "Digital assets"
+          },
+          {
+            "path": "/channels/{channel}/feed",
+            "methods": ["GET"],
+            "description": "Channel export feed"
+          },
+          {
+            "path": "/webhooks",
+            "methods": ["GET", "POST"],
+            "description": "Webhook management"
+          },
+          {
+            "path": "/import",
+            "methods": ["POST"],
+            "description": "Data import"
+          },
+          {
+            "path": "/quality/duplicates",
+            "methods": ["GET", "POST"],
+            "description": "Duplicate detection"
+          },
+          {
+            "path": "/ai/enrich",
+            "methods": ["POST"],
+            "description": "AI enrichment job"
+          }
+        ],
+        "query_parameters": {
+          "pagination": ["page", "page_size", "limit", "offset"],
+          "filtering": ["filters", "or_filters"],
+          "sorting": ["order_by"],
+          "fields": ["fields"],
+          "scoping": ["locale", "channel"],
+          "includes": ["include_variants", "include_assets", "include_relationships"]
+        }
+      },
+      "webhooks": {
+        "events": [
+          "product.created",
+          "product.updated",
+          "product.deleted",
+          "product.published",
+          "product.unpublished",
+          "variant.created",
+          "variant.updated",
+          "asset.linked",
+          "workflow.transitioned",
+          "import.completed",
+          "export.completed"
+        ],
+        "payload_format": {
+          "webhook_id": "string",
+          "timestamp": "ISO8601",
+          "event_type": "string",
+          "version": "1.0",
+          "source": "frappe_pim",
+          "data": {
+            "entity_type": "string",
+            "entity_name": "string",
+            "changes": "object",
+            "snapshot": "object"
+          },
+          "metadata": {
+            "correlation_id": "string",
+            "user": "string"
+          }
+        },
+        "security": {
+          "signature_header": "X-PIM-Signature",
+          "algorithm": "HMAC-SHA256"
+        }
+      }
+    },
+  
+    "scheduled_jobs": [
+      {
+        "method": "frappe_pim.tasks.calculate_completeness_scores",
+        "frequency": "hourly"
+      },
+      {
+        "method": "frappe_pim.tasks.run_duplicate_detection",
+        "frequency": "daily"
+      },
+      {
+        "method": "frappe_pim.tasks.process_ai_enrichment_queue",
+        "frequency": "every 15 minutes"
+      },
+      {
+        "method": "frappe_pim.tasks.sync_erpnext_items",
+        "frequency": "hourly"
+      },
+      {
+        "method": "frappe_pim.tasks.export_to_channels",
+        "frequency": "daily"
+      },
+      {
+        "method": "frappe_pim.tasks.cleanup_old_events",
+        "frequency": "weekly"
+      },
+      {
+        "method": "frappe_pim.tasks.calculate_supplier_quality_scores",
+        "frequency": "monthly"
+      },
+      {
+        "method": "frappe_pim.tasks.check_asset_expirations",
+        "frequency": "daily"
+      },
+      {
+        "method": "frappe_pim.tasks.escalate_overdue_tasks",
+        "frequency": "hourly"
+      }
+    ],
+  
+    "fixtures": [
+      {
+        "doctype": "Role",
+        "filters": [["name", "in", ["PIM Manager", "PIM Editor", "PIM Viewer", "Data Steward", "Supplier Portal User"]]]
+      },
+      {
+        "doctype": "Custom Field",
+        "filters": [["module", "=", "Frappe PIM"]]
+      },
+      {
+        "doctype": "Workflow",
+        "filters": [["name", "like", "PIM%"]]
+      }
+    ],
+  
+    "roles": [
+      {
+        "name": "PIM Manager",
+        "description": "Full PIM access including settings and configuration"
+      },
+      {
+        "name": "PIM Editor",
+        "description": "Create and edit products, manage content"
+      },
+      {
+        "name": "PIM Viewer",
+        "description": "Read-only access to product data"
+      },
+      {
+        "name": "Data Steward",
+        "description": "Data quality management, golden record validation"
+      },
+      {
+        "name": "Supplier Portal User",
+        "description": "External supplier product submission"
+      }
+    ],
+  
+    "workspace": {
+      "name": "PIM",
+      "label": "Product Information Management",
+      "icon": "database",
+      "shortcuts": [
+        {"type": "Doctype", "label": "Products", "link_to": "Product Master"},
+        {"type": "Doctype", "label": "Product Families", "link_to": "Product Family"},
+        {"type": "Doctype", "label": "Golden Records", "link_to": "Golden Record"},
+        {"type": "Doctype", "label": "Digital Assets", "link_to": "Digital Asset"},
+        {"type": "Doctype", "label": "AI Jobs", "link_to": "AI Enrichment Job"},
+        {"type": "Doctype", "label": "Settings", "link_to": "PIM Settings"}
+      ],
+      "links": {
+        "Product Management": [
+          "Product Master",
+          "Product Variant",
+          "Product Type",
+          "Product Family",
+          "Family Variant"
+        ],
+        "Attributes": [
+          "Attribute",
+          "Attribute Group",
+          "Attribute Template",
+          "Attribute Option"
+        ],
+        "Classification": [
+          "Product Category",
+          "Taxonomy",
+          "Taxonomy Node",
+          "Taxonomy Crosswalk"
+        ],
+        "Data Quality": [
+          "Golden Record",
+          "Survivorship Rule",
+          "Data Quality Rule",
+          "Duplicate Detection Rule"
+        ],
+        "Channels & Localization": [
+          "Sales Channel",
+          "PIM Locale"
+        ],
+        "Digital Assets": [
+          "Digital Asset"
+        ],
+        "Workflow": [
+          "PIM Workflow",
+          "Workflow Task"
+        ],
+        "Supplier Portal": [
+          "Supplier Portal User",
+          "Supplier Submission",
+          "Supplier Quality Score"
+        ],
+        "Reference Entities": [
+          "Brand",
+          "Manufacturer",
+          "Reference Entity Type"
+        ],
+        "AI & Automation": [
+          "AI Enrichment Job",
+          "AI Prompt Template",
+          "AI Approval Queue"
+        ],
+        "Integration": [
+          "PIM Event",
+          "Webhook Configuration",
+          "Import Configuration",
+          "Export Configuration",
+          "Source System"
+        ],
+        "Settings": [
+          "PIM Settings"
+        ]
+      }
+    },
+  
+    "development_guidelines": {
+      "coding_standards": {
+        "python": "PEP 8, type hints required",
+        "javascript": "ES6+, no jQuery in new code",
+        "naming": "snake_case for Python, camelCase for JS",
+        "docstrings": "Google style"
+      },
+      "testing": {
+        "unit_tests": "pytest with frappe test utilities",
+        "integration_tests": "Required for ERPNext sync",
+        "coverage_minimum": "80%"
+      },
+      "git": {
+        "branch_naming": "feature/*, bugfix/*, hotfix/*",
+        "commit_format": "Conventional Commits"
+      }
+    },
+  
+    "vibecoding_instructions": {
+      "priority_order": [
+        "1. Core DocTypes: Product Master, Product Variant, Product Type, Product Family",
+        "2. Attributes System: Attribute, Attribute Group, Product Attribute Value",
+        "3. Classification: Product Category, Taxonomy, Taxonomy Node",
+        "4. ERPNext Integration: Hooks, sync functions",
+        "5. Data Quality: Golden Record, Survivorship Rule, Duplicate Detection",
+        "6. Channels: Sales Channel, Locale, Completeness",
+        "7. DAM: Digital Asset, Renditions, Product Asset Link",
+        "8. Workflow: PIM Workflow, Task, Transitions",
+        "9. Supplier Portal: Portal User, Submission, Quality Score",
+        "10. AI: Enrichment Job, Prompt Template, Approval Queue",
+        "11. APIs: REST endpoints, Webhooks",
+        "12. Settings and Fixtures"
+      ],
+      "key_implementation_notes": [
+        "Her DocType için controller (Python) ve client script (JS) oluştur",
+        "Child table'lar için istable=1 olmalı",
+        "Translatable alanlar için translatable property kullan",
+        "Tree structure için nsm (Nested Set Model) kullan",
+        "ERPNext Link alanları için depends_on ile PIM Settings kontrolü yap",
+        "Event sourcing için her değişiklikte PIM Event oluştur",
+        "Completeness hesaplaması cache'lenmeli ve incremental güncellenmeli",
+        "AI işlemleri background job olarak çalışmalı",
+        "Webhook gönderimi retry pattern ile olmalı",
+        "API rate limiting için frappe.rate_limiter kullan"
+      ],
+      "mevcut_doctypelari_koru": [
+        "Mevcut Golden Record DocType'ını bu prompt ile uyumlu hale getir",
+        "Mevcut Attribute Template yapısını genişlet",
+        "Mevcut Product Family'yi Family Variant ile entegre et",
+        "Data Steward role'ünü koru ve genişlet"
+      ]
+    }
+  }

@@ -1,0 +1,872 @@
+# Frappe PIM Master Prompt v4.0
+> Enterprise Product Information Management System with Full Frappe Ecosystem Integration
+
+---
+
+## Dosya Referansları ve Amaçları
+
+| Dosya | Amaç | Kullanım |
+|-------|------|----------|
+| `@pim_v3.json` | Ana PIM yapılandırma şeması | DocType tanımları, field yapıları, workspace konfigürasyonu |
+| `@CHANGELOG.md` | Versiyon geçmişi ve değişiklikler | Önceki sürümlerden farklar, migration notları |
+| `@Frappe_pim_prompt.md` | Frappe-spesifik geliştirme kuralları | Controller, hooks, API pattern'leri |
+| `@Master_Prompt.md` | Genel mimari ve tasarım prensipleri | High-level architecture decisions |
+| `@master_prompt.json` | Makine-okunabilir prompt yapısı | CI/CD entegrasyonu, otomatik validasyon |
+| `@New-Features-PIM.md` | Yeni özellik spesifikasyonları | Roadmap, feature detayları |
+| `@PROMPT.md` | Kısa referans prompt | Quick start, özet kurallar |
+| `@Prompt_v6.md` | Detaylı implementasyon rehberi | Step-by-step geliştirme talimatları |
+
+---
+
+## 1. Proje Genel Bakış
+
+### 1.1 Vizyon
+Frappe Framework üzerine inşa edilmiş, enterprise-grade Product Information Management sistemi. Tüm Frappe ekosistemi ile native entegrasyon.
+
+### 1.2 Temel Prensipler
+- **Single Source of Truth**: Golden Record pattern ile veri bütünlüğü
+- **Multi-Tenant Ready**: Site bazlı izolasyon
+- **Channel Agnostic**: Omnichannel içerik dağıtımı
+- **AI-First**: Enrichment ve classification için AI entegrasyonu
+- **Compliance Ready**: GS1, eCl@ss, UNSPSC standartları
+
+---
+
+## 2. Frappe Ekosistem Entegrasyonları
+
+### 2.1 Core Frappe Apps (Zorunlu)
+
+```
+frappe/frappe          → Framework core, DocType engine
+frappe/erpnext         → Item, BOM, Stock, Supplier entegrasyonu
+```
+
+### 2.2 Resmi Frappe Apps
+
+| App | Entegrasyon Noktası | PIM Kullanımı |
+|-----|---------------------|---------------|
+| `frappe/hrms` | Employee → Data Steward | Veri sorumlusu ataması |
+| `frappe/crm` | Lead/Deal → Product Recommendations | Satış önerileri |
+| `frappe/helpdesk` | Ticket → Product Issues | Ürün sorun takibi |
+| `frappe/lms` | Course → Product Training | Ürün eğitim içerikleri |
+| `frappe/insights` | Dashboard → PIM Analytics | Veri kalitesi raporları |
+| `frappe/builder` | Page → Product Landing Pages | Ürün sayfaları |
+| `frappe/drive` | File → Digital Asset Storage | DAM entegrasyonu |
+| `frappe/wiki` | Article → Product Documentation | Ürün dokümantasyonu |
+| `frappe/webshop` | Website Item → Product Master | E-ticaret senkronizasyonu |
+| `frappe/payments` | Payment Gateway → Supplier Portal | Tedarikçi ödemeleri |
+| `frappe/print_designer` | Print Format → Product Labels | Ürün etiketleri |
+| `frappe/healthcare` | Item → Medical Product | Tıbbi ürün attribute'ları |
+| `frappe/education` | Course Material → Product Catalog | Eğitim materyali ürünleri |
+| `frappe/lending` | - | N/A |
+| `frappe/non_profit` | Donor Item → Product Donation | Bağış ürünleri |
+
+### 2.3 Topluluk Apps
+
+| App | Entegrasyon | PIM Kullanımı |
+|-----|-------------|---------------|
+| `raven` | Channel → Product Discussions | Ürün iletişimi |
+| `gameplan` | Project → Product Launch | Ürün lansmanı yönetimi |
+| `pos_awesome` | POS Item → Product Master | POS senkronizasyonu |
+| `frappe_whatsapp` | Notification → Product Alerts | Ürün bildirimleri |
+| `india_compliance` | GST → Tax Classification | Vergi sınıflandırması |
+| `ecommerce_integrations` | Marketplace → Channel Export | Pazar yeri entegrasyonu |
+| `frappe_graphql` | API → Product Query | GraphQL endpoint |
+
+### 2.4 Geliştirici Araçları
+
+| Araç | Kullanım |
+|------|----------|
+| `doppio` | Vue/React SPA entegrasyonu |
+| `frappe_types` | TypeScript tip üretimi |
+| `frappe_renovation` | Mobile app desteği |
+| `frappeapi` | FastAPI-style routing |
+
+---
+
+## 3. DocType Mimarisi
+
+### 3.1 Core DocTypes (Tier 1 - MVP)
+
+```
+Product Master                    # Ana ürün kaydı
+├── product_type                  → Link: Product Type
+├── product_family                → Link: Product Family
+├── item                          → Link: Item (ERPNext)
+├── attributes                    → Table: Product Attribute Value
+├── variants                      → Link: Product Variant (child products)
+├── classifications               → Table: Product Classification
+├── assets                        → Table: Product Asset Link
+├── relationships                 → Table: Product Relationship
+├── channel_statuses              → Table: Channel Readiness Status
+└── golden_record                 → Link: Golden Record
+
+Product Variant                   # Varyant ürünler (multi-level)
+├── parent_product                → Link: Product Master
+├── variant_level                 → Int (1-5)
+├── axis_values                   → Table: Variant Axis Value
+└── inherited_attributes          → Table (read-only, parent'tan)
+
+Product Type                      # Yapısal şablon
+├── type_code                     → Data (unique)
+├── allowed_families              → Table MultiSelect: Product Family
+├── required_attribute_groups     → Table: Type Attribute Group
+└── variant_configuration         → JSON (axis definitions)
+
+Product Family                    # Attribute şablonu
+├── family_code                   → Data (unique)
+├── parent_family                 → Link: Product Family (tree)
+├── family_attributes             → Table: Family Attribute Item
+└── family_variants               → Table: Family Variant
+```
+
+### 3.2 Attribute System (Tier 2)
+
+```
+Attribute                         # Attribute tanımı
+├── attribute_code                → Data (unique)
+├── input_type                    → Select (text, number, select, multiselect, boolean, date, rich_text, json, image, file)
+├── attribute_group               → Link: Attribute Group
+├── unit_of_measure               → Link: UOM
+├── validation_rules              → Table: Attribute Validation Rule
+├── options                       → Table: Attribute Option (for select types)
+├── is_localizable                → Check
+├── is_scopable_by_channel        → Check
+└── is_time_variant               → Check
+
+Attribute Group                   # Attribute gruplama
+├── group_name                    → Data
+├── group_code                    → Data (unique)
+├── display_order                 → Int
+└── icon                          → Data
+
+Attribute Template                # Sektörel şablonlar
+├── template_code                 → Data (unique)
+├── sector                        → Link: PIM Sector
+├── template_attributes           → Table: Template Attribute Item
+└── linked_families               → Table MultiSelect: Product Family
+
+Product Attribute Value           # 3D Scoped değerler (Child Table)
+├── attribute                     → Link: Attribute
+├── value                         → Dynamic (based on input_type)
+├── locale                        → Link: PIM Locale
+├── channel                       → Link: Sales Channel
+├── valid_from                    → Datetime
+├── valid_to                      → Datetime
+├── source                        → Link: Source System
+└── confidence_score              → Percent
+```
+
+### 3.3 Classification (Tier 3)
+
+```
+Taxonomy                          # Sınıflandırma sistemi
+├── taxonomy_code                 → Data (GS1, UNSPSC, ECLASS, ETIM, CUSTOM)
+├── taxonomy_name                 → Data
+├── version                       → Data
+├── root_nodes                    → Link: Taxonomy Node
+└── is_hierarchical               → Check
+
+Taxonomy Node                     # Sınıflandırma düğümü (20 seviye)
+├── node_code                     → Data
+├── taxonomy                      → Link: Taxonomy
+├── parent_node                   → Link: Taxonomy Node
+├── level                         → Int (1-20)
+├── lft / rgt                     → Int (Nested Set Model)
+├── suggested_attributes          → Table: Node Attribute Suggestion
+└── mapping_rules                 → Table: Classification Mapping Rule
+
+Product Classification            # Ürün-taxonomy bağlantısı (Child Table)
+├── taxonomy                      → Link: Taxonomy
+├── taxonomy_node                 → Link: Taxonomy Node
+├── is_primary                    → Check
+└── classification_date           → Date
+
+Taxonomy Crosswalk                # Taxonomy mapping
+├── source_taxonomy               → Link: Taxonomy
+├── source_node                   → Link: Taxonomy Node
+├── target_taxonomy               → Link: Taxonomy
+├── target_node                   → Link: Taxonomy Node
+└── mapping_confidence            → Percent
+```
+
+### 3.4 Data Quality (Tier 4)
+
+```
+Golden Record                     # Master Data Management
+├── product_master                → Link: Product Master
+├── survivorship_rule             → Link: Survivorship Rule
+├── merge_mode                    → Select (auto, manual_review)
+├── source_records                → Table: Golden Record Source
+├── data_steward                  → Link: User
+├── validation_status             → Select (pending, validated, rejected)
+├── merge_count                   → Int
+└── last_merge_date               → Datetime
+
+Golden Record Source              # Kaynak sistem kaydı (Child Table)
+├── source_system                 → Link: Source System
+├── source_record_id              → Data
+├── confidence_score              → Percent
+├── is_primary_source             → Check
+└── last_sync                     → Datetime
+
+Survivorship Rule                 # Değer seçim kuralları
+├── rule_name                     → Data
+├── rule_type                     → Select (most_recent, source_priority, most_complete, highest_confidence, custom)
+├── source_priority_order         → Table: Source Priority Item
+└── custom_logic                  → Code (Python)
+
+Data Quality Rule                 # Veri kalitesi kuralları
+├── rule_code                     → Data
+├── rule_type                     → Select (completeness, accuracy, consistency, timeliness, uniqueness)
+├── target_doctype                → Link: DocType
+├── target_field                  → Data
+├── validation_expression         → Code
+├── severity                      → Select (error, warning, info)
+└── auto_fix_action               → Code (optional)
+
+Duplicate Detection Rule          # Çift kayıt tespiti
+├── rule_name                     → Data
+├── match_fields                  → Table: Match Field Config
+├── threshold_score               → Percent
+├── action_on_match               → Select (flag, auto_merge, manual_review)
+└── is_active                     → Check
+```
+
+### 3.5 Channels & Localization (Tier 5)
+
+```
+Sales Channel                     # Satış kanalı
+├── channel_code                  → Data (unique)
+├── channel_type                  → Select (ecommerce, marketplace, retail, wholesale, b2b_portal)
+├── supported_locales             → Table MultiSelect: PIM Locale
+├── required_attributes           → Table: Channel Attribute Requirement
+├── export_configuration          → Link: Export Configuration
+└── completeness_requirements     → Table: Channel Completeness Rule
+
+PIM Locale                        # Dil/bölge
+├── locale_code                   → Data (en_US, tr_TR, de_DE...)
+├── language                      → Link: Language
+├── currency                      → Link: Currency
+├── date_format                   → Data
+├── number_format                 → Data
+└── is_default                    → Check
+
+Channel Readiness Status          # Kanal hazırlık durumu (Child Table)
+├── channel                       → Link: Sales Channel
+├── locale                        → Link: PIM Locale
+├── completeness_score            → Percent
+├── missing_attributes            → Table: Missing Attribute Item
+├── validation_errors             → Table: Validation Error Item
+├── status                        → Select (draft, pending_review, approved, published, rejected)
+├── published_at                  → Datetime
+└── published_by                  → Link: User
+```
+
+### 3.6 Digital Asset Management (Tier 6)
+
+```
+Digital Asset                     # Dijital varlık
+├── asset_code                    → Data (auto)
+├── file                          → Attach
+├── asset_type                    → Select (image, video, document, 3d_model, audio)
+├── mime_type                     → Data
+├── file_size                     → Int
+├── dimensions                    → JSON (width, height for images)
+├── renditions                    → Table: Asset Rendition
+├── metadata                      → JSON (EXIF, XMP, IPTC)
+├── tags                          → Table MultiSelect: Asset Tag
+├── ai_analysis                   → JSON (object detection, colors, etc.)
+└── usage_rights                  → Table: Asset Usage Right
+
+Asset Rendition                   # Varyant görseller (Child Table)
+├── rendition_type                → Select (thumbnail, web, print, mobile)
+├── file                          → Attach
+├── width                         → Int
+├── height                        → Int
+├── format                        → Data (jpg, png, webp)
+└── quality                       → Int
+
+Product Asset Link                # Ürün-asset bağlantısı (Child Table)
+├── digital_asset                 → Link: Digital Asset
+├── asset_role                    → Select (main, gallery, lifestyle, technical, video, document)
+├── display_order                 → Int
+├── channel                       → Link: Sales Channel (optional)
+├── locale                        → Link: PIM Locale (optional)
+└── alt_text                      → Data (translatable)
+```
+
+### 3.7 Workflow Engine (Tier 7)
+
+```
+PIM Workflow                      # İş akışı tanımı
+├── workflow_name                 → Data
+├── target_doctype                → Link: DocType
+├── states                        → Table: Workflow State
+├── transitions                   → Table: Workflow Transition
+├── default_state                 → Data
+└── is_active                     → Check
+
+Workflow Task                     # Görev
+├── workflow                      → Link: PIM Workflow
+├── reference_doctype             → Link: DocType
+├── reference_name                → Dynamic Link
+├── current_state                 → Data
+├── assigned_to                   → Link: User
+├── due_date                      → Date
+├── priority                      → Select (low, medium, high, critical)
+├── comments                      → Table: Workflow Comment
+└── completed_at                  → Datetime
+```
+
+### 3.8 Supplier Portal (Tier 8)
+
+```
+Supplier Portal User              # Tedarikçi kullanıcısı
+├── supplier                      → Link: Supplier (ERPNext)
+├── user                          → Link: User
+├── allowed_categories            → Table MultiSelect: Product Category
+├── submission_limit              → Int (monthly)
+├── quality_score                 → Percent
+└── portal_status                 → Select (active, suspended, pending_approval)
+
+Supplier Submission               # Tedarikçi ürün gönderimi
+├── supplier_user                 → Link: Supplier Portal User
+├── submission_type               → Select (new_product, update, bulk_import)
+├── products                      → Table: Submission Product Item
+├── attachments                   → Table: Submission Attachment
+├── review_status                 → Select (pending, in_review, approved, rejected, partially_approved)
+├── reviewer                      → Link: User
+├── review_comments               → Text
+└── processed_at                  → Datetime
+
+Supplier Quality Score            # Tedarikçi kalite puanı
+├── supplier_user                 → Link: Supplier Portal User
+├── period                        → Data (YYYY-MM)
+├── total_submissions             → Int
+├── approved_count                → Int
+├── rejection_count               → Int
+├── quality_score                 → Percent (calculated)
+├── data_completeness_avg         → Percent
+└── response_time_avg             → Float (hours)
+```
+
+### 3.9 AI & Automation (Tier 9)
+
+```
+AI Enrichment Job                 # AI zenginleştirme görevi
+├── job_type                      → Select (description_generation, attribute_extraction, classification_suggestion, image_tagging, translation)
+├── target_products               → Table: Job Product Item
+├── prompt_template               → Link: AI Prompt Template
+├── ai_provider                   → Select (anthropic, openai, gemini, local)
+├── model                         → Data
+├── status                        → Select (pending, processing, completed, failed)
+├── results                       → JSON
+├── processed_count               → Int
+├── error_log                     → Text
+└── completed_at                  → Datetime
+
+AI Prompt Template                # AI prompt şablonu
+├── template_code                 → Data
+├── job_type                      → Select
+├── system_prompt                 → Long Text
+├── user_prompt_template          → Long Text (Jinja)
+├── output_format                 → Select (text, json, structured)
+├── output_schema                 → JSON (for structured)
+└── is_active                     → Check
+
+AI Approval Queue                 # AI sonuç onay kuyruğu
+├── enrichment_job                → Link: AI Enrichment Job
+├── product                       → Link: Product Master
+├── field_name                    → Data
+├── original_value                → Text
+├── suggested_value               → Text
+├── confidence_score              → Percent
+├── approval_status               → Select (pending, approved, rejected, modified)
+├── approved_by                   → Link: User
+├── approved_value                → Text (if modified)
+└── approved_at                   → Datetime
+```
+
+### 3.10 Integration Layer (Tier 10)
+
+```
+Source System                     # Kaynak sistem tanımı
+├── system_code                   → Data (unique)
+├── system_name                   → Data
+├── system_type                   → Select (erp, ecommerce, supplier, marketplace, manual)
+├── connection_config             → JSON (encrypted)
+├── sync_direction                → Select (inbound, outbound, bidirectional)
+├── priority_score                → Int (for survivorship)
+└── is_active                     → Check
+
+PIM Event                         # Event sourcing
+├── event_type                    → Select (created, updated, deleted, published, merged, enriched)
+├── reference_doctype             → Link: DocType
+├── reference_name                → Dynamic Link
+├── event_data                    → JSON (before/after snapshots)
+├── triggered_by                  → Link: User
+├── triggered_at                  → Datetime
+└── processed                     → Check
+
+Webhook Configuration             # Webhook tanımı
+├── webhook_name                  → Data
+├── target_url                    → Data
+├── http_method                   → Select (POST, PUT, PATCH)
+├── trigger_events                → Table MultiSelect: Event Type
+├── target_doctypes               → Table MultiSelect: DocType
+├── headers                       → JSON
+├── payload_template              → Code (Jinja)
+├── retry_count                   → Int
+├── is_active                     → Check
+└── last_triggered                → Datetime
+
+Import Configuration              # Import tanımı
+├── config_name                   → Data
+├── source_type                   → Select (csv, xlsx, json, xml, api)
+├── field_mapping                 → Table: Import Field Mapping
+├── transformation_rules          → Table: Import Transformation
+├── duplicate_handling            → Select (skip, update, create_new, merge)
+├── validation_rules              → Table: Import Validation
+└── is_active                     → Check
+
+Export Configuration              # Export tanımı
+├── config_name                   → Data
+├── target_channel                → Link: Sales Channel
+├── export_format                 → Select (json, xml, csv, xlsx, feed)
+├── field_selection               → Table: Export Field Selection
+├── filters                       → JSON
+├── transformation_rules          → Table: Export Transformation
+├── schedule                      → Data (cron expression)
+└── is_active                     → Check
+```
+
+### 3.11 Reference Entities (Tier 11)
+
+```
+Brand                             # Marka
+├── brand_code                    → Data (unique)
+├── brand_name                    → Data
+├── logo                          → Attach Image
+├── description                   → Text Editor
+├── website                       → Data
+├── manufacturer                  → Link: Manufacturer
+└── is_active                     → Check
+
+Manufacturer                      # Üretici
+├── manufacturer_code             → Data (unique)
+├── manufacturer_name             → Data
+├── logo                          → Attach Image
+├── country                       → Link: Country
+├── website                       → Data
+├── certifications                → Table: Manufacturer Certification
+└── is_active                     → Check
+
+Reference Entity Type             # Dinamik referans entity
+├── entity_type_code              → Data
+├── entity_name                   → Data
+├── custom_fields                 → JSON
+└── is_active                     → Check
+```
+
+### 3.12 Settings (Tier 12)
+
+```
+PIM Settings                      # Ana ayarlar (Single DocType)
+├── default_locale                → Link: PIM Locale
+├── enable_erpnext_sync           → Check
+├── sync_direction                → Select (pim_to_erp, erp_to_pim, bidirectional)
+├── auto_create_item              → Check
+├── item_naming_series            → Data
+├── enable_ai_enrichment          → Check
+├── default_ai_provider           → Select
+├── ai_api_key                    → Password
+├── enable_supplier_portal        → Check
+├── supplier_submission_workflow  → Link: PIM Workflow
+├── enable_dam                    → Check
+├── dam_storage_path              → Data
+├── enable_webhooks               → Check
+├── event_retention_days          → Int
+└── completeness_cache_ttl        → Int (minutes)
+```
+
+---
+
+## 4. ERPNext Entegrasyonu
+
+### 4.1 Bidirectional Sync
+
+```python
+# hooks.py
+doc_events = {
+    "Product Master": {
+        "after_insert": "frappe_pim.integrations.erpnext.sync_to_item",
+        "on_update": "frappe_pim.integrations.erpnext.sync_to_item",
+    },
+    "Item": {
+        "after_insert": "frappe_pim.integrations.erpnext.sync_from_item",
+        "on_update": "frappe_pim.integrations.erpnext.sync_from_item",
+    }
+}
+
+# Field Mapping
+ERPNEXT_FIELD_MAP = {
+    "Product Master.sku": "Item.item_code",
+    "Product Master.product_name": "Item.item_name",
+    "Product Master.short_description": "Item.description",
+    "Product Master.brand": "Item.brand",
+    "Product Master.default_uom": "Item.stock_uom",
+    "Product Master.item_group": "Item.item_group",
+    "Product Master.is_stock_item": "Item.is_stock_item",
+    "Product Master.valuation_rate": "Item.valuation_rate",
+}
+```
+
+### 4.2 Conditional Field Display
+
+```javascript
+// product_master.js
+frappe.ui.form.on('Product Master', {
+    refresh: function(frm) {
+        // ERPNext alanlarını sadece entegrasyon aktifse göster
+        frappe.db.get_single_value('PIM Settings', 'enable_erpnext_sync')
+            .then(enabled => {
+                frm.toggle_display(['item', 'item_group', 'valuation_rate'], enabled);
+            });
+    }
+});
+```
+
+---
+
+## 5. API Endpoints
+
+### 5.1 REST API
+
+```python
+# api.py
+
+@frappe.whitelist()
+def get_product(sku: str, channel: str = None, locale: str = None):
+    """Get product with scoped attributes"""
+    pass
+
+@frappe.whitelist()
+def search_products(query: str, filters: dict = None, page: int = 1, limit: int = 20):
+    """Full-text product search"""
+    pass
+
+@frappe.whitelist()
+def get_product_completeness(sku: str, channel: str):
+    """Get completeness score for channel"""
+    pass
+
+@frappe.whitelist()
+def publish_to_channel(sku: str, channel: str):
+    """Publish product to channel"""
+    pass
+
+@frappe.whitelist()
+def bulk_update_attributes(products: list, attributes: dict):
+    """Bulk attribute update"""
+    pass
+
+@frappe.whitelist()
+def run_enrichment_job(product_skus: list, job_type: str):
+    """Trigger AI enrichment"""
+    pass
+
+@frappe.whitelist()
+def get_golden_record_candidates(sku: str):
+    """Find potential duplicate records"""
+    pass
+
+@frappe.whitelist()
+def merge_records(golden_record: str, source_records: list):
+    """Merge source records into golden record"""
+    pass
+```
+
+### 5.2 GraphQL (with frappe_graphql)
+
+```graphql
+type Product {
+  sku: ID!
+  name: String!
+  attributes(locale: String, channel: String): [AttributeValue!]!
+  variants: [ProductVariant!]!
+  assets(role: AssetRole): [DigitalAsset!]!
+  classifications: [Classification!]!
+  channelStatus(channel: String!): ChannelReadiness
+}
+
+type Query {
+  product(sku: ID!): Product
+  products(filter: ProductFilter, pagination: Pagination): ProductConnection!
+  searchProducts(query: String!, filter: ProductFilter): ProductConnection!
+}
+
+type Mutation {
+  updateProductAttribute(sku: ID!, attribute: String!, value: JSON!, scope: ScopeInput): Product!
+  publishProduct(sku: ID!, channel: String!): PublishResult!
+}
+```
+
+---
+
+## 6. Workspace Yapılandırması
+
+```json
+{
+  "name": "PIM",
+  "label": "Product Information Management",
+  "icon": "database",
+  "shortcuts": [
+    {"type": "Doctype", "label": "Products", "link_to": "Product Master", "icon": "package"},
+    {"type": "Doctype", "label": "Families", "link_to": "Product Family", "icon": "layers"},
+    {"type": "Doctype", "label": "Golden Records", "link_to": "Golden Record", "icon": "git-merge"},
+    {"type": "Doctype", "label": "Digital Assets", "link_to": "Digital Asset", "icon": "image"},
+    {"type": "Doctype", "label": "AI Jobs", "link_to": "AI Enrichment Job", "icon": "cpu"},
+    {"type": "Doctype", "label": "Settings", "link_to": "PIM Settings", "icon": "settings"}
+  ],
+  "links": {
+    "Product Management": [
+      "Product Master",
+      "Product Variant", 
+      "Product Type",
+      "Product Family",
+      "Family Variant"
+    ],
+    "Attributes": [
+      "Attribute",
+      "Attribute Group",
+      "Attribute Template",
+      "Attribute Option"
+    ],
+    "Classification": [
+      "Product Category",
+      "Taxonomy",
+      "Taxonomy Node",
+      "Taxonomy Crosswalk"
+    ],
+    "Data Quality": [
+      "Golden Record",
+      "Survivorship Rule",
+      "Data Quality Rule",
+      "Duplicate Detection Rule",
+      "Data Steward"
+    ],
+    "Channels & Localization": [
+      "Sales Channel",
+      "PIM Locale"
+    ],
+    "Digital Assets": [
+      "Digital Asset",
+      "Asset Tag"
+    ],
+    "Workflow": [
+      "PIM Workflow",
+      "Workflow Task"
+    ],
+    "Supplier Portal": [
+      "Supplier Portal User",
+      "Supplier Submission",
+      "Supplier Quality Score"
+    ],
+    "Reference Entities": [
+      "Brand",
+      "Manufacturer",
+      "Reference Entity Type"
+    ],
+    "AI & Automation": [
+      "AI Enrichment Job",
+      "AI Prompt Template",
+      "AI Approval Queue"
+    ],
+    "Integration": [
+      "PIM Event",
+      "Webhook Configuration",
+      "Import Configuration",
+      "Export Configuration",
+      "Source System"
+    ],
+    "Settings": [
+      "PIM Settings",
+      "PIM Sector"
+    ]
+  }
+}
+```
+
+---
+
+## 7. Geliştirme Kuralları
+
+### 7.1 Coding Standards
+
+```python
+# Python: PEP 8, type hints zorunlu
+def get_product_completeness(
+    sku: str, 
+    channel: str, 
+    locale: Optional[str] = None
+) -> dict[str, Any]:
+    """
+    Calculate product completeness for a channel.
+    
+    Args:
+        sku: Product SKU
+        channel: Sales channel code
+        locale: Optional locale code
+        
+    Returns:
+        Dict with completeness score and missing attributes
+    """
+    pass
+```
+
+```javascript
+// JavaScript: ES6+, jQuery kullanma (yeni kodda)
+frappe.ui.form.on('Product Master', {
+    async refresh(frm) {
+        const completeness = await frappe.call({
+            method: 'frappe_pim.api.get_product_completeness',
+            args: { sku: frm.doc.sku, channel: 'default' }
+        });
+        frm.dashboard.add_indicator(
+            `Completeness: ${completeness.message.score}%`,
+            completeness.message.score > 80 ? 'green' : 'orange'
+        );
+    }
+});
+```
+
+### 7.2 Testing Requirements
+
+```python
+# pytest ile unit test
+def test_attribute_value_scoping():
+    """Test 3D attribute scoping (locale × channel × time)"""
+    pass
+
+def test_golden_record_merge():
+    """Test survivorship rule application"""
+    pass
+
+def test_completeness_calculation():
+    """Test channel completeness scoring"""
+    pass
+
+# Coverage minimum: %80
+```
+
+### 7.3 Git Conventions
+
+```
+Branch naming: feature/*, bugfix/*, hotfix/*
+Commit format: Conventional Commits
+
+feat(product): add variant inheritance
+fix(golden-record): correct survivorship logic
+docs(api): update endpoint documentation
+```
+
+---
+
+## 8. Implementation Priority
+
+### Phase 1: Core Foundation (Week 1-4)
+1. Product Master, Product Variant, Product Type, Product Family
+2. Attribute, Attribute Group, Product Attribute Value
+3. Basic ERPNext Item sync
+4. PIM Settings
+
+### Phase 2: Data Quality (Week 5-8)
+5. Product Category, Taxonomy, Taxonomy Node
+6. Golden Record, Survivorship Rule
+7. Data Quality Rule, Duplicate Detection
+8. Sales Channel, PIM Locale
+
+### Phase 3: Content & Assets (Week 9-12)
+9. Digital Asset, Asset Rendition
+10. Channel Readiness Status
+11. Completeness calculation engine
+12. Basic workflow
+
+### Phase 4: External Integration (Week 13-16)
+13. Supplier Portal
+14. Import/Export configurations
+15. Webhook system
+16. PIM Event (event sourcing)
+
+### Phase 5: AI & Advanced (Week 17-20)
+17. AI Enrichment Job, Prompt Template
+18. AI Approval Queue
+19. Advanced workflow engine
+20. GraphQL API
+
+---
+
+## 9. Key Implementation Notes
+
+```python
+# Her DocType için
+# 1. Controller (Python) oluştur
+# 2. Client script (JS) oluştur
+# 3. Unit test yaz
+
+# Child table'lar için
+# istable = 1 olmalı
+
+# Translatable alanlar için
+# translatable = 1 property kullan
+
+# Tree structure için
+# Nested Set Model (nsm) kullan
+
+# ERPNext Link alanları için
+# depends_on ile PIM Settings kontrolü yap
+
+# Event sourcing için
+# Her değişiklikte PIM Event oluştur
+
+# Completeness hesaplaması
+# Cache'lenrneli ve incremental güncellenmeli
+
+# AI işlemleri
+# Background job olarak çalışmalı
+
+# Webhook gönderimi
+# Retry pattern ile olmalı
+
+# API rate limiting
+# frappe.rate_limiter kullan
+```
+
+---
+
+## 10. Mevcut DocType'ları Koruma
+
+```
+✓ Mevcut Golden Record DocType'ını bu prompt ile uyumlu hale getir
+✓ Mevcut Attribute Template yapısını genişlet
+✓ Mevcut Product Family'yi Family Variant ile entegre et
+✓ Data Steward role'ünü koru ve genişlet
+✓ Mevcut workspace yapısını preserve et
+```
+
+---
+
+## Versiyon Bilgisi
+
+| Alan | Değer |
+|------|-------|
+| Prompt Version | 4.0 |
+| Frappe Uyumluluğu | v15, v16 |
+| ERPNext Uyumluluğu | v15, v16 |
+| Son Güncelleme | 2026-01-20 |
+| Yazar | Ismail + Claude |
+
+---
+
+*Bu master prompt, Frappe PIM geliştirmesi için tek referans kaynağıdır. Tüm geliştirme bu dokümana uygun yapılmalıdır.*

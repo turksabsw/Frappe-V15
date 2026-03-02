@@ -1,0 +1,26 @@
+Column,Meaning / how to use for waterfall planning
+ID,Stable identifier for dependency linking and change control.
+Category,Epic-level grouping (differentiator area).
+Feature,Atomic requirement name (one deliverable).
+Description,Implementation-level description; expand to detailed spec.
+Example vendors,Which PIM/MDM vendors are known for this capability (signal).
+Why this is differentiating,Explains why it is not baseline/common.
+Source URL,Plain URL to a vendor/docs page used as reference.
+Primary user role,Main persona for acceptance testing.
+UI surface,"Where it will appear (Admin UI, Portal, API, Background Jobs)."
+Data entities,Core objects impacted; informs DocType design.
+Integration touchpoints,External systems/protocols needed.
+Frappe coverage,Tamamen var / Kısmen var / Tamamen yok (within standard Frappe/ERPNext).
+Closest Frappe modules,"Nearest building blocks to reuse (e.g., Item Variants, Workflows, File)."
+Build approach,Extend ERPNext vs new custom app vs external service.
+Suggested DocTypes,Proposed DocTypes (starting point) for Frappe implementation.
+Non-functional notes,Scale/performance/availability expectations.
+Security/Compliance notes,"Security controls, privacy constraints, audit needs."
+Dependencies,Upstream features (IDs) required first; fill as you refine plan.
+Acceptance criteria,Definition of done for UAT.
+Priority,MoSCoW: Must/Should/Could (edit as scope is finalized).
+Waterfall phase,Where it sits in a classic plan (Requirements/Design/Build/SIT/UAT/GoLive).
+Est. effort (dev-days),Rough dev effort per feature; refine with your team.
+Complexity,S/M/L/XL: technical complexity of implementation.
+QA focus,Unit/Integration/E2E/Security/Performance etc.
+Owner team,Likely primary ownership (Backend/Frontend/Data/DevOps).
