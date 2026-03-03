@@ -152,8 +152,68 @@ class ProductMaster(Document):
 
     @staticmethod
     def get_count(args):
-        """Get count of Product Masters."""
-        return frappe.db.count("Item", args.get("filters", {}))
+        """Get count of Product Masters by counting Items with mapped filters."""
+        filters = {}
+        if args.get("filters"):
+            raw_filters = args.get("filters", {})
+            if isinstance(raw_filters, dict):
+                for k, v in raw_filters.items():
+                    item_field = PM_TO_ITEM_MAPPING.get(k, k)
+                    filters[item_field] = v
+            elif isinstance(raw_filters, (list, tuple)):
+                for f in raw_filters:
+                    if isinstance(f, (list, tuple)) and len(f) >= 3:
+                        fieldname, operator, value = f[0], f[1], f[2]
+                        item_field = PM_TO_ITEM_MAPPING.get(fieldname, fieldname)
+                        filters[item_field] = [operator, value]
+            else:
+                filters = raw_filters
+        return frappe.db.count("Item", filters)
+
+    @staticmethod
+    def get_stats(args):
+        """Get sidebar stats for Product Master list view.
+
+        Returns aggregated counts by filterable fields (status, lifecycle_stage,
+        product_family, brand) so the Frappe list sidebar can show grouped counts.
+        """
+        stat_fields = args.get("stats") or []
+        result = {}
+
+        # Mapping from PM stat field names to Item field names
+        stat_field_map = {
+            "status": "custom_pim_status",
+            "lifecycle_stage": "custom_pim_lifecycle_stage",
+            "product_family": "custom_pim_product_family",
+            "product_type": "custom_pim_product_type",
+            "brand": "brand",
+            "owner": "owner",
+        }
+
+        for field in stat_fields:
+            if field not in stat_field_map:
+                # Only allow known fields to prevent SQL injection
+                result[field] = {}
+                continue
+
+            item_field = stat_field_map[field]
+            try:
+                counts = frappe.db.sql(
+                    """SELECT `{field}`, COUNT(*) as count
+                    FROM `tabItem`
+                    WHERE IFNULL(`{field}`, '') != ''
+                    GROUP BY `{field}`
+                    ORDER BY count DESC""".format(field=item_field),
+                    as_dict=True
+                )
+                result[field] = {
+                    row.get(item_field, ""): row.get("count", 0)
+                    for row in counts
+                }
+            except Exception:
+                result[field] = {}
+
+        return result
 
     def load_from_db(self):
         """Load Product Master data from ERPNext Item."""
