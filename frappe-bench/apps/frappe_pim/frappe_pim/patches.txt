@@ -2,5 +2,7 @@
 # This file lists database migration patches that will be executed during bench migrate
 # Format: frappe_pim.patches.patch_module.patch_function
 #
-# Example:
-# frappe_pim.patches.v0_1.add_completeness_score_index
+# v1.0 - Initial Release
+# Install standard attribute types, attribute groups, conflict rules,
+# create onboarding states for existing PIM users, and ensure indexes.
+frappe_pim.patches.v1_0.setup_onboarding_state
