@@ -4,7 +4,7 @@
   "module": "PIM",
   "naming_rule": "By fieldname",
   "autoname": "field:family_code",
-  "is_tree": true,
+  "is_tree": 1,
   "nsm_parent_field": "parent_family",
   "allow_rename": 1,
   "track_changes": 1,
@@ -46,6 +46,40 @@
       "fieldtype": "Data",
       "label": "SKU Prefix",
       "description": "Prefix for auto-generated SKUs. Example: TSH-, ELK-"
+    },
+    {
+      "fieldname": "section_break_tree",
+      "fieldtype": "Section Break",
+      "label": "Tree Structure",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "lft",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Left",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "rgt",
+      "fieldtype": "Int",
+      "hidden": 1,
+      "label": "Right",
+      "no_copy": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "is_group",
+      "fieldtype": "Check",
+      "label": "Is Group",
+      "default": 0
+    },
+    {
+      "fieldname": "old_parent",
+      "fieldtype": "Link",
+      "label": "Old Parent",
+      "options": "Product Family"
     },
     {
       "fieldname": "section_break_settings",
