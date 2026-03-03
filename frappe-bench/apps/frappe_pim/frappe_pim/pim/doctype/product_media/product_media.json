@@ -4,7 +4,8 @@
   "module": "PIM",
   "istable": 1,
   "editable_grid": 1,
-  
+  "track_changes": 0,
+
   "fields": [
     {
       "fieldname": "file",
@@ -17,24 +18,42 @@
     {
       "fieldname": "media_type",
       "fieldtype": "Select",
-      "label": "Media Type",
-      "options": "Main Image\nGallery\nThumbnail\n360 View\nVideo\nDocument\nOther",
-      "default": "Gallery",
+      "label": "Type",
+      "options": "Image\nVideo\nDocument\n3D Model\nAudio",
+      "default": "Image",
       "in_list_view": 1,
-      "columns": 2
+      "columns": 1
     },
     {
       "fieldname": "title",
       "fieldtype": "Data",
       "label": "Title",
       "in_list_view": 1,
-      "columns": 2
+      "columns": 2,
+      "translatable": 1
     },
     {
       "fieldname": "alt_text",
       "fieldtype": "Data",
       "label": "Alt Text",
-      "description": "Alternative text for accessibility"
+      "translatable": 1,
+      "description": "For accessibility and SEO"
+    },
+    {
+      "fieldname": "is_primary",
+      "fieldtype": "Check",
+      "label": "Primary",
+      "default": 0,
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Main image for product listing"
+    },
+    {
+      "fieldname": "role",
+      "fieldtype": "Select",
+      "label": "Role",
+      "options": "Main\nGallery\nThumbnail\nTechnical\nPackaging\nLifestyle",
+      "default": "Gallery"
     },
     {
       "fieldname": "sort_order",
