@@ -11,13 +11,25 @@
         "collapsible": 1
     },
     {
+        "name": "Item-custom_pim_product_id",
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_pim_product_id",
+        "fieldtype": "Data",
+        "label": "PIM Product ID",
+        "insert_after": "custom_pim_section_break",
+        "module": "PIM",
+        "read_only": 1,
+        "description": "Linked Product Master or Product Variant name"
+    },
+    {
         "name": "Item-custom_pim_sku",
         "doctype": "Custom Field",
         "dt": "Item",
         "fieldname": "custom_pim_sku",
         "fieldtype": "Data",
         "label": "PIM SKU",
-        "insert_after": "custom_pim_section_break",
+        "insert_after": "custom_pim_product_id",
         "module": "PIM",
         "unique": 0
     },
@@ -632,6 +644,18 @@
         "collapsible": 1
     },
     {
+        "name": "Item-custom_pim_completeness",
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_pim_completeness",
+        "fieldtype": "Percent",
+        "label": "Completeness Score",
+        "insert_after": "custom_pim_data_mgmt_section",
+        "module": "PIM",
+        "read_only": 1,
+        "description": "Product data completeness percentage"
+    },
+    {
         "name": "Item-custom_pim_data_quality_policy",
         "doctype": "Custom Field",
         "dt": "Item",
@@ -639,7 +663,7 @@
         "fieldtype": "Link",
         "label": "Data Quality Policy",
         "options": "Data Quality Policy",
-        "insert_after": "custom_pim_data_mgmt_section",
+        "insert_after": "custom_pim_completeness",
         "module": "PIM"
     },
     {
@@ -729,14 +753,37 @@
         "collapsible": 1
     },
     {
+        "name": "Item-custom_pim_sync_enabled",
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_pim_sync_enabled",
+        "fieldtype": "Check",
+        "label": "PIM Sync Enabled",
+        "default": "1",
+        "insert_after": "custom_pim_sync_section",
+        "module": "PIM"
+    },
+    {
+        "name": "Item-custom_pim_sync_direction",
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_pim_sync_direction",
+        "fieldtype": "Select",
+        "label": "Sync Direction",
+        "options": "PIM Master\nERP Master\nBidirectional",
+        "default": "Bidirectional",
+        "insert_after": "custom_pim_sync_enabled",
+        "module": "PIM"
+    },
+    {
         "name": "Item-custom_pim_sync_status",
         "doctype": "Custom Field",
         "dt": "Item",
         "fieldname": "custom_pim_sync_status",
         "fieldtype": "Select",
         "label": "Sync Status",
-        "options": "\nPending\nInProgress\nSynced\nError",
-        "insert_after": "custom_pim_sync_section",
+        "options": "\nPending\nInProgress\nSynced\nConflict\nError",
+        "insert_after": "custom_pim_sync_direction",
         "module": "PIM",
         "read_only": 1
     },
