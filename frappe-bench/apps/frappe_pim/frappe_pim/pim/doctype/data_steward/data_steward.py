@@ -132,12 +132,12 @@ class DataSteward(Document):
     def get_product_count(self):
         """Get count of products in this stewardship domain."""
         if self.domain == "All Products":
-            return frappe.db.count("Item", {"pim_status": ["is", "set"]})
+            return frappe.db.count("Item", {"custom_pim_status": ["is", "set"]})
 
         if not self.domain_value:
             return 0
 
-        filters = {"pim_status": ["is", "set"]}
+        filters = {"custom_pim_status": ["is", "set"]}
 
         if self.domain == "Product Family":
             # Count products in this family (and children if include_children)
@@ -158,7 +158,7 @@ class DataSteward(Document):
             return frappe.db.count(
                 "Item",
                 {
-                    "pim_status": ["is", "set"],
+                    "custom_pim_status": ["is", "set"],
                     "workflow_state": ["in", ["Pending Approval", "Pending Review"]]
                 }
             )
@@ -169,10 +169,10 @@ class DataSteward(Document):
         """Get average data quality score for products in domain."""
         try:
             result = frappe.db.sql("""
-                SELECT AVG(pim_completeness) as avg_score
+                SELECT AVG(custom_pim_completeness) as avg_score
                 FROM `tabItem`
-                WHERE pim_status IS NOT NULL
-                AND pim_completeness > 0
+                WHERE custom_pim_status IS NOT NULL
+                AND custom_pim_completeness > 0
             """, as_dict=True)
 
             if result and result[0].avg_score:

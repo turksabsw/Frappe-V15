@@ -570,14 +570,11 @@ def _create_product_from_submission(submission_doc: Any) -> Optional[str]:
             item.standard_rate = float(price)
 
         # Set PIM fields if available
-        if hasattr(item, "pim_title"):
-            item.pim_title = product_data.get("product_name")
-        if hasattr(item, "pim_description"):
-            item.pim_description = product_data.get("description")
-        if hasattr(item, "pim_brand"):
-            item.pim_brand = product_data.get("brand")
-        if hasattr(item, "pim_status"):
-            item.pim_status = "Draft"
+        item.description = product_data.get("description") or ""
+        if product_data.get("brand"):
+            item.brand = product_data.get("brand")
+        if hasattr(item, "custom_pim_status"):
+            item.custom_pim_status = "Draft"
 
         # Flag to indicate source
         item.flags.from_brand_portal = True

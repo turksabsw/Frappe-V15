@@ -838,7 +838,7 @@ class TestAPIFunctions(unittest.TestCase):
         self.assertEqual(result["channel_code"], "amazon")
 
 
-class TestCompleteness Summary(unittest.TestCase):
+class TestCompletenessSummary(unittest.TestCase):
     """Test cases for completeness summary function."""
 
     @classmethod

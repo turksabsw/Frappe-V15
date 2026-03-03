@@ -276,10 +276,10 @@ class ProductVariant(Document):
                 item = frappe.get_doc("Item", self.parent_product)
                 # Create a simple dict-like object with mapped fields
                 parent = frappe._dict({
-                    'product_family': item.get('product_family'),
+                    'product_family': item.get('custom_pim_product_family'),
                     'description': item.get('description'),
-                    'brand': item.get('pim_brand'),
-                    'manufacturer': item.get('pim_manufacturer'),
+                    'brand': item.get('brand'),
+                    'manufacturer': item.get('manufacturer'),
                 })
             except Exception as e:
                 frappe.log_error(
@@ -400,10 +400,10 @@ class ProductVariant(Document):
         - variant_name -> item_name
         - variant_code -> item_code
         - description -> description
-        - product_family -> pim_family
-        - brand -> pim_brand
-        - manufacturer -> pim_manufacturer
-        - completeness_score -> pim_completeness
+        - product_family -> custom_pim_product_family
+        - brand -> brand (native Item field)
+        - manufacturer -> manufacturer (native Item field)
+        - completeness_score -> custom_pim_completeness
         """
         # Check if this update came from ERPNext sync - skip to prevent infinite loop
         if getattr(self, '_from_erpnext_sync', False):
@@ -438,18 +438,18 @@ class ProductVariant(Document):
             item.description = self.description
 
         # Map to PIM custom fields on Item (defined in custom_field.json fixture)
-        if hasattr(item, 'pim_family') and self.product_family:
-            item.pim_family = self.product_family
-        if hasattr(item, 'pim_brand') and self.brand:
-            item.pim_brand = self.brand
-        if hasattr(item, 'pim_manufacturer') and self.manufacturer:
-            item.pim_manufacturer = self.manufacturer
-        if hasattr(item, 'pim_completeness'):
-            item.pim_completeness = self.completeness_score or 0
+        if hasattr(item, 'custom_pim_product_family') and self.product_family:
+            item.custom_pim_product_family = self.product_family
+        if self.brand:
+            item.brand = self.brand
+        if self.manufacturer:
+            item.manufacturer = self.manufacturer
+        if hasattr(item, 'custom_pim_completeness'):
+            item.custom_pim_completeness = self.completeness_score or 0
 
         # Link back to this variant
-        if hasattr(item, 'pim_product_id'):
-            item.pim_product_id = self.name
+        if hasattr(item, 'custom_pim_product_id'):
+            item.custom_pim_product_id = self.name
 
         # Set the _from_pim_sync flag BEFORE save to prevent ERPNext
         # from triggering a sync back to PIM (infinite loop prevention)
@@ -496,12 +496,12 @@ class ProductVariant(Document):
             self.description = item.description
 
         # Map PIM custom fields from Item
-        if hasattr(item, 'pim_family') and item.pim_family:
-            self.product_family = item.pim_family
-        if hasattr(item, 'pim_brand') and item.pim_brand:
-            self.brand = item.pim_brand
-        if hasattr(item, 'pim_manufacturer') and item.pim_manufacturer:
-            self.manufacturer = item.pim_manufacturer
+        if hasattr(item, 'custom_pim_product_family') and item.custom_pim_product_family:
+            self.product_family = item.custom_pim_product_family
+        if hasattr(item, 'brand') and item.brand:
+            self.brand = item.brand
+        if hasattr(item, 'manufacturer') and item.manufacturer:
+            self.manufacturer = item.manufacturer
 
 
 def _sync_variant_to_erpnext(variant_name):
