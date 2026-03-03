@@ -51,6 +51,14 @@
       "description": "System attribute group, cannot be deleted"
     },
     {
+      "fieldname": "parent_group",
+      "fieldtype": "Link",
+      "label": "Parent Group",
+      "options": "PIM Attribute Group",
+      "in_standard_filter": 1,
+      "description": "Parent group for hierarchical grouping of attributes"
+    },
+    {
       "fieldname": "section_break_display",
       "fieldtype": "Section Break",
       "label": "Display Settings"
