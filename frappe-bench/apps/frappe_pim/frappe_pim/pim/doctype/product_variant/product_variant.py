@@ -349,12 +349,44 @@ class ProductVariant(Document):
     def on_update(self):
         """Hook called after the document is saved to the database
 
-        Triggers synchronization to ERPNext Item if sync is enabled.
+        Triggers asynchronous synchronization to ERPNext Item if sync
+        is enabled. Uses frappe.enqueue() for background processing to
+        avoid blocking and issues with Virtual DocType interactions.
         Uses _from_pim_sync flag pattern to prevent infinite sync loops.
         """
-        # Temporarily disabled - sync causes issues with Virtual DocType
-        # self.sync_to_erpnext()
-        pass
+        # Skip if this update came from ERPNext sync (prevent loops)
+        if getattr(self, '_from_erpnext_sync', False):
+            return
+
+        # Skip if sync is disabled
+        if not getattr(self, 'sync_enabled', True):
+            return
+
+        # Skip if no variant_code to sync with
+        if not self.variant_code:
+            return
+
+        try:
+            from frappe.utils.background_jobs import is_job_enqueued
+
+            job_id = f"pim_variant_sync_{self.name}"
+
+            # Don't enqueue if already processing
+            if is_job_enqueued(job_id):
+                return
+
+            frappe.enqueue(
+                "frappe_pim.pim.doctype.product_variant.product_variant._sync_variant_to_erpnext",
+                queue="default",
+                timeout=300,
+                job_id=job_id,
+                variant_name=self.name
+            )
+        except Exception as e:
+            frappe.log_error(
+                message=f"Failed to enqueue sync for Product Variant {self.name}: {str(e)}",
+                title="Product Variant Sync Error"
+            )
 
     def sync_to_erpnext(self):
         """Sync Product Variant to ERPNext Item
@@ -470,3 +502,35 @@ class ProductVariant(Document):
             self.brand = item.pim_brand
         if hasattr(item, 'pim_manufacturer') and item.pim_manufacturer:
             self.manufacturer = item.pim_manufacturer
+
+
+def _sync_variant_to_erpnext(variant_name):
+    """Background task to sync a Product Variant to ERPNext Item.
+
+    Called via frappe.enqueue() from ProductVariant.on_update().
+    Loads the variant document and delegates to sync_to_erpnext().
+
+    Args:
+        variant_name: Name of the Product Variant to sync
+
+    Note: frappe imports are deferred to function level to allow module
+    import without Frappe being available (e.g., for testing/verification).
+    """
+    import frappe
+
+    try:
+        if not frappe.db.exists("Product Variant", variant_name):
+            frappe.logger("pim_sync").warning(
+                f"Product Variant not found for sync: {variant_name}"
+            )
+            return
+
+        variant = frappe.get_doc("Product Variant", variant_name)
+        variant.sync_to_erpnext()
+        frappe.db.commit()
+
+    except Exception as e:
+        frappe.log_error(
+            message=f"Failed to sync Product Variant {variant_name} to ERPNext: {str(e)}",
+            title="Product Variant Sync Error"
+        )
