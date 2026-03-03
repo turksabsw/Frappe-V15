@@ -10,13 +10,35 @@ This module provides event handlers for Item document events to ensure
 that changes made to Items in ERPNext are reflected in Product Master.
 
 The sync uses flags to prevent infinite loops:
-- _from_pim_sync: Set by Product Master when it modifies an Item
+- _from_pim_sync: Set by Product Master/Variant when modifying an Item
+- from_pim: Set by erp_sync.py utility when creating/updating Items
+- _from_variant_generation: Set during variant generation
 - _from_erpnext_sync: Set by this module when syncing to Product Master
 """
 
 import frappe
 from frappe import _
 from frappe.utils import cstr
+
+
+def _is_from_pim(doc):
+    """
+    Check if this document operation originated from PIM.
+
+    Checks multiple flag names for compatibility:
+    - _from_pim_sync: Set by Product Master and Product Variant controllers
+    - from_pim: Set by erp_sync.py utility functions and queue processor
+
+    Args:
+        doc: The document to check
+
+    Returns:
+        bool: True if operation originated from PIM
+    """
+    return (
+        getattr(doc.flags, "_from_pim_sync", False)
+        or getattr(doc.flags, "from_pim", False)
+    )
 
 
 def on_item_update(doc, method=None):
@@ -31,7 +53,9 @@ def on_item_update(doc, method=None):
         method: The method name (unused, required by Frappe hooks)
     """
     # Skip if this update originated from PIM sync
-    if getattr(doc.flags, "_from_pim_sync", False):
+    # Check both flag names: _from_pim_sync (set by Product Master/Variant)
+    # and from_pim (set by erp_sync.py utility)
+    if _is_from_pim(doc):
         return
 
     # Skip if this is a variant being created by PIM
@@ -65,7 +89,7 @@ def on_item_insert(doc, method=None):
         method: The method name (unused, required by Frappe hooks)
     """
     # Skip if this insert originated from PIM sync
-    if getattr(doc.flags, "_from_pim_sync", False):
+    if _is_from_pim(doc):
         return
 
     # Skip if this is a variant being created by PIM
@@ -95,7 +119,7 @@ def on_item_trash(doc, method=None):
         method: The method name (unused, required by Frappe hooks)
     """
     # Skip if this delete originated from PIM sync
-    if getattr(doc.flags, "_from_pim_sync", False):
+    if _is_from_pim(doc):
         return
 
     # Check if this Item has PIM data
