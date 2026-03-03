@@ -121,24 +121,19 @@ doc_events = {
 
 # Scheduled Tasks
 # ---------------
+# Sync queue processing for bidirectional PIM <-> ERPNext synchronization
 
-# scheduler_events = {
-#     "all": [
-#         "frappe_pim.tasks.all"
-#     ],
-#     "daily": [
-#         "frappe_pim.tasks.daily"
-#     ],
-#     "hourly": [
-#         "frappe_pim.tasks.hourly"
-#     ],
-#     "weekly": [
-#         "frappe_pim.tasks.weekly"
-#     ],
-#     "monthly": [
-#         "frappe_pim.tasks.monthly"
-#     ],
-# }
+scheduler_events = {
+    "all": [
+        "frappe_pim.pim.sync.queue_processor.process_sync_queue"
+    ],
+    "daily": [
+        "frappe_pim.pim.sync.queue_processor.cleanup_old_sync_entries"
+    ],
+    "hourly": [
+        "frappe_pim.pim.sync.queue_processor.retry_all_failed"
+    ],
+}
 
 # Testing
 # -------
