@@ -41,7 +41,13 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  const title = to.meta.title as string | undefined
+  let title = to.meta.title as string | undefined
+
+  // Dynamic title for product detail
+  if (to.name === 'product-detail' && to.params.id === 'new') {
+    title = 'Create Product'
+  }
+
   document.title = title ? `${title} - Frappe PIM` : 'Frappe PIM'
   next()
 })
