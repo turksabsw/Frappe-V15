@@ -39,6 +39,8 @@ import { getStepId } from '@/types'
 import CompanyInfoStep from './steps/CompanyInfoStep.vue'
 import IndustryStep from './steps/IndustryStep.vue'
 import ProductStructureStep from './steps/ProductStructureStep.vue'
+import AttributeConfigStep from './steps/AttributeConfigStep.vue'
+import TaxonomyStep from './steps/TaxonomyStep.vue'
 import ChannelStep from './steps/ChannelStep.vue'
 import WorkflowStep from './steps/WorkflowStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
@@ -66,8 +68,8 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
   company_info: CompanyInfoStep,
   industry_selection: IndustryStep,
   product_structure: ProductStructureStep,
-  // attribute_config: AttributeConfigStep,   // Phase 6 — not yet implemented
-  // taxonomy: TaxonomyStep,                  // Phase 6 — not yet implemented
+  attribute_config: AttributeConfigStep,
+  taxonomy: TaxonomyStep,
   channel_setup: ChannelStep,
   // localization: LocalizationStep,          // Phase 6 — not yet implemented
   workflow_preferences: WorkflowStep,
