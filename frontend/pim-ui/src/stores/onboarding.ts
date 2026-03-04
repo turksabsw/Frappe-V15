@@ -71,6 +71,45 @@ const ONBOARDING_V2_API = {
 } as const
 
 // ============================================================================
+// Network Retry Utilities
+// ============================================================================
+
+/** Maximum automatic retry attempts for retriable network errors */
+const MAX_RETRY_ATTEMPTS = 3
+
+/** Base delay between retries in ms (exponential backoff: 1s, 2s, 4s) */
+const RETRY_BASE_DELAY_MS = 1000
+
+/**
+ * Check if an error is retriable (network failure or 5xx server error).
+ * Does NOT retry on 4xx client errors (validation, auth, permissions).
+ */
+function isRetriableError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase()
+    if (
+      msg.includes('network error') ||
+      msg.includes('timeout') ||
+      msg.includes('econnrefused') ||
+      msg.includes('econnreset') ||
+      msg.includes('err_network')
+    ) {
+      return true
+    }
+  }
+  if (typeof err === 'object' && err !== null && 'response' in err) {
+    const resp = (err as { response?: { status?: number } }).response
+    if (resp?.status && resp.status >= 500) return true
+  }
+  return false
+}
+
+/** Promise-based sleep for retry backoff delays */
+function retrySleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// ============================================================================
 // Legacy Constants (backward compatibility)
 // ============================================================================
 
@@ -213,6 +252,15 @@ export const useOnboardingStore = defineStore('onboarding', () => {
 
   /** Completion response after finishing the wizard */
   const completionResult = ref<CompletionResponse | null>(null)
+
+  /** Whether a network retry is in progress */
+  const retrying = ref(false)
+
+  /** Last failed action descriptor for manual retry */
+  const lastFailedAction = ref<{
+    type: 'save_step' | 'skip_step' | 'apply_template' | 'complete_onboarding'
+    args: unknown[]
+  } | null>(null)
 
   // =========================================================================
   // Computed — Legacy (backward compatible)
@@ -482,6 +530,36 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   }
 
   /**
+   * Execute an async API call with automatic retry on retriable errors.
+   * Uses exponential backoff: 1s, 2s, 4s between attempts.
+   * Non-retriable errors (4xx, validation) are thrown immediately.
+   */
+  async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    let lastError: unknown
+
+    for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        if (attempt > 0) {
+          retrying.value = true
+          await retrySleep(RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1))
+        }
+        const result = await fn()
+        retrying.value = false
+        return result
+      } catch (err) {
+        lastError = err
+        if (!isRetriableError(err) || attempt === MAX_RETRY_ATTEMPTS) {
+          retrying.value = false
+          throw err
+        }
+      }
+    }
+
+    retrying.value = false
+    throw lastError
+  }
+
+  /**
    * Save form data for a specific wizard step via the new API.
    * Performs dual-write to PIM Onboarding State and Tenant Config.
    *
@@ -503,16 +581,26 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loading.value = true
     error.value = null
 
+    // Record action for retry on network failure
+    lastFailedAction.value = {
+      type: 'save_step',
+      args: [stepId, formData, advance],
+    }
+
     try {
-      const result = await api.callMethod<StepSaveResponse>(
-        ONBOARDING_V2_API.saveStep,
-        {
-          step_id: stepId,
-          step_number: stepNumber,
-          form_data: JSON.stringify(formData),
-          advance,
-        },
+      const result = await withRetry(() =>
+        api.callMethod<StepSaveResponse>(
+          ONBOARDING_V2_API.saveStep,
+          {
+            step_id: stepId,
+            step_number: stepNumber,
+            form_data: JSON.stringify(formData),
+            advance,
+          },
+        ),
       )
+
+      lastFailedAction.value = null
 
       if (result.success) {
         // Mark step as completed if advancing
@@ -568,14 +656,24 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loading.value = true
     error.value = null
 
+    // Record action for retry on network failure
+    lastFailedAction.value = {
+      type: 'skip_step',
+      args: [stepId],
+    }
+
     try {
-      const result = await api.callMethod<StepSkipResponse>(
-        ONBOARDING_V2_API.skipStep,
-        {
-          step_id: stepId,
-          step_number: stepNumber,
-        },
+      const result = await withRetry(() =>
+        api.callMethod<StepSkipResponse>(
+          ONBOARDING_V2_API.skipStep,
+          {
+            step_id: stepId,
+            step_number: stepNumber,
+          },
+        ),
       )
+
+      lastFailedAction.value = null
 
       if (result.skipped) {
         // Add to skipped list
@@ -694,16 +792,26 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loading.value = true
     error.value = null
 
+    // Record action for retry on network failure
+    lastFailedAction.value = {
+      type: 'complete_onboarding',
+      args: [formData],
+    }
+
     try {
       const params: Record<string, unknown> = {}
       if (formData) {
         params.form_data = JSON.stringify(formData)
       }
 
-      const result = await api.callMethod<CompletionResponse>(
-        ONBOARDING_V2_API.complete,
-        params,
+      const result = await withRetry(() =>
+        api.callMethod<CompletionResponse>(
+          ONBOARDING_V2_API.complete,
+          params,
+        ),
       )
+
+      lastFailedAction.value = null
       completionResult.value = result
 
       if (result.success) {
@@ -735,11 +843,21 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loading.value = true
     error.value = null
 
+    // Record action for retry on network failure
+    lastFailedAction.value = {
+      type: 'apply_template',
+      args: [createDemoProducts],
+    }
+
     try {
-      const result = await api.callMethod<CompletionResponse>(
-        ONBOARDING_V2_API.applyTemplate,
-        { create_demo_products: createDemoProducts },
+      const result = await withRetry(() =>
+        api.callMethod<CompletionResponse>(
+          ONBOARDING_V2_API.applyTemplate,
+          { create_demo_products: createDemoProducts },
+        ),
       )
+
+      lastFailedAction.value = null
 
       if (result.success) {
         isTemplateApplied.value = true
@@ -822,6 +940,57 @@ export const useOnboardingStore = defineStore('onboarding', () => {
    */
   function getPreviewData(stepId: WizardStepId): PreviewData | null {
     return previewData.value[stepId] ?? null
+  }
+
+  /**
+   * Retry the last failed save_step/skip_step/apply_template/complete_onboarding
+   * action with the same parameters. Intended for manual retry from the UI
+   * after a network error.
+   *
+   * @returns The action result, or null if no action to retry
+   */
+  async function retryLastAction(): Promise<unknown> {
+    const action = lastFailedAction.value
+    if (!action) return null
+
+    switch (action.type) {
+      case 'save_step': {
+        const [stepId, formData, advance] = action.args as [WizardStepId, StepFormData, boolean]
+        return saveWizardStep(stepId, formData, advance)
+      }
+      case 'skip_step': {
+        const [stepId] = action.args as [WizardStepId]
+        return skipWizardStep(stepId)
+      }
+      case 'apply_template': {
+        const [createDemoProducts] = action.args as [boolean]
+        return applyWizardTemplate(createDemoProducts)
+      }
+      case 'complete_onboarding': {
+        const [formData] = action.args as [StepFormData | undefined]
+        return completeWizard(formData)
+      }
+      default:
+        return null
+    }
+  }
+
+  /**
+   * Check if the last error is a retriable network error.
+   * Returns true for network failures and server errors (5xx),
+   * false for validation or client errors (4xx).
+   */
+  function isLastErrorRetriable(): boolean {
+    if (!error.value) return false
+    const msg = error.value.toLowerCase()
+    return (
+      msg.includes('network') ||
+      msg.includes('timeout') ||
+      msg.includes('server error') ||
+      msg.includes('500') ||
+      msg.includes('502') ||
+      msg.includes('503')
+    )
   }
 
   // =========================================================================
@@ -1180,6 +1349,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loading,
     isApplying,
     error,
+    retrying,
+    lastFailedAction,
     onboardingStatus,
     currentWizardStep,
     statusResponse,
@@ -1237,6 +1408,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     getWizardStepData,
     setPreviewData,
     getPreviewData,
+    retryLastAction,
+    isLastErrorRetriable,
 
     // Actions — Legacy
     initialize,

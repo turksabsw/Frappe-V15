@@ -88,6 +88,15 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
 /** Direction of the current step transition (for slide animation) */
 const direction = ref<WizardDirection>('forward')
 
+/** Whether a retry operation is in progress */
+const retrying = ref(false)
+
+/** Last failed action callback for manual retry from error banner */
+const lastFailedAction = ref<(() => Promise<void>) | null>(null)
+
+/** Whether the current error can be retried */
+const canRetry = computed(() => !!lastFailedAction.value && !retrying.value)
+
 // ============================================================================
 // Computed
 // ============================================================================
@@ -209,7 +218,18 @@ async function handleNext(): Promise<void> {
   if (!result.valid) return
 
   direction.value = 'forward'
-  await wizard.goToNext(formData ?? undefined)
+
+  // Capture action for retry on network failure
+  const action = async () => {
+    await wizard.goToNext(formData ?? undefined)
+  }
+  lastFailedAction.value = action
+  await action()
+
+  // Clear retry action on success (no error = success)
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
 }
 
 /**
@@ -218,7 +238,16 @@ async function handleNext(): Promise<void> {
  */
 async function handleStepNext(formData?: StepFormData): Promise<void> {
   direction.value = 'forward'
-  await wizard.goToNext(formData)
+
+  const action = async () => {
+    await wizard.goToNext(formData)
+  }
+  lastFailedAction.value = action
+  await action()
+
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
 }
 
 /**
@@ -234,7 +263,16 @@ async function handleBack(): Promise<void> {
  */
 async function handleSkipStep(): Promise<void> {
   direction.value = 'forward'
-  await wizard.skipCurrentStep()
+
+  const action = async () => {
+    await wizard.skipCurrentStep()
+  }
+  lastFailedAction.value = action
+  await action()
+
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
 }
 
 /**
@@ -242,6 +280,36 @@ async function handleSkipStep(): Promise<void> {
  */
 async function handleSkipAll(): Promise<void> {
   await wizard.skipEntireOnboarding()
+}
+
+/**
+ * Retry the last failed action after a network error.
+ * Re-invokes the stored action callback with the same parameters.
+ */
+async function handleRetry(): Promise<void> {
+  const action = lastFailedAction.value
+  if (!action || retrying.value) return
+
+  retrying.value = true
+  try {
+    await action()
+    // Clear on success
+    if (!wizard.error.value) {
+      lastFailedAction.value = null
+    }
+  } catch {
+    // Action still failed — keep it available for another retry
+  } finally {
+    retrying.value = false
+  }
+}
+
+/**
+ * Dismiss the current error and clear retry state.
+ */
+function dismissError(): void {
+  wizard.clearError()
+  lastFailedAction.value = null
 }
 
 /**
@@ -311,12 +379,22 @@ function handleStepClick(stepNumber: number): void {
               />
             </svg>
             <p class="flex-1 text-sm text-red-700">{{ wizard.error.value }}</p>
-            <button
-              class="text-sm font-medium text-red-600 hover:text-red-800"
-              @click="wizard.clearError()"
-            >
-              Dismiss
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="canRetry"
+                class="rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
+                :disabled="retrying"
+                @click="handleRetry"
+              >
+                {{ retrying ? 'Retrying...' : 'Retry' }}
+              </button>
+              <button
+                class="text-sm font-medium text-red-600 hover:text-red-800"
+                @click="dismissError"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
 
           <!-- Step Content (with slide transition) -->
