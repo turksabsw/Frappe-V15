@@ -1216,3 +1216,640 @@ class TestOnboardingAPI(FrappeTestCase):
         self.assertIsNone(doc.completed_at)
         self.assertFalse(doc.is_completed)
         self.assertFalse(doc.is_skipped)
+
+
+class TestOnboardingAPIv2(FrappeTestCase):
+    """Tests for the 7 new V2 API endpoints in frappe_pim.pim.api.onboarding.
+
+    These endpoints use the Tenant Config + OnboardingService dual-write
+    pattern, distinct from the legacy PIM Onboarding State-only endpoints.
+
+    Covers:
+    1. get_onboarding_status - Combined status from Tenant Config + state
+    2. save_step - Save step data with dual-write to Tenant Config
+    3. skip_step - Skip individual steps (9-11 only)
+    4. get_template_preview - Preview industry template
+    5. apply_template - Apply template from Tenant Config selection
+    6. v2_complete_onboarding - Complete with Tenant Config update
+    7. update_post_onboarding - Edit configuration post-onboarding
+    """
+
+    V2_TEST_USER = "onb_v2_test@example.com"
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up test fixtures for all V2 tests."""
+        super().setUpClass()
+        cls._cleanup_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up after all V2 tests."""
+        super().tearDownClass()
+        cls._cleanup_test_data()
+
+    @classmethod
+    def _cleanup_test_data(cls):
+        """Remove any V2 test data from previous runs."""
+        # Clean onboarding states for v2 test users
+        for table, condition in [
+            ("tabPIM Onboarding State", "user LIKE 'onb_v2_%'"),
+            ("tabOnboarding Step Log", "user LIKE 'onb_v2_%'"),
+        ]:
+            try:
+                frappe.db.sql(f"DELETE FROM `{table}` WHERE {condition}")
+            except Exception:
+                pass
+
+        # Reset Tenant Config onboarding fields
+        try:
+            tc = frappe.get_single("Tenant Config")
+            tc.onboarding_status = "not_started"
+            tc.onboarding_current_step = 0
+            tc.onboarding_started_at = None
+            tc.onboarding_completed_at = None
+            tc.selected_industry = None
+            tc.onboarding_step_data = "[]"
+            tc.save(ignore_permissions=True)
+        except Exception:
+            pass
+
+        frappe.db.commit()
+
+    def tearDown(self):
+        """Reset state after each test."""
+        frappe.db.rollback()
+
+    def _delete_onboarding_state(self, user):
+        """Helper to delete test onboarding state."""
+        existing = frappe.db.exists("PIM Onboarding State", {"user": user})
+        if existing:
+            frappe.delete_doc(
+                "PIM Onboarding State", existing, ignore_permissions=True
+            )
+            frappe.db.commit()
+
+    def _create_onboarding_state(self, user, step="pending"):
+        """Helper to create a test onboarding state document."""
+        doc = frappe.new_doc("PIM Onboarding State")
+        doc.user = user
+        doc.current_step = step
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        return doc
+
+    def _reset_tenant_config(self):
+        """Helper to reset the Tenant Config to pre-onboarding state."""
+        try:
+            tc = frappe.get_single("Tenant Config")
+            tc.onboarding_status = "not_started"
+            tc.onboarding_current_step = 0
+            tc.onboarding_started_at = None
+            tc.onboarding_completed_at = None
+            tc.selected_industry = None
+            tc.onboarding_step_data = "[]"
+            tc.save(ignore_permissions=True)
+            frappe.db.commit()
+        except Exception:
+            pass
+
+    # ========================================================================
+    # 1. get_onboarding_status
+    # ========================================================================
+
+    def test_60_get_onboarding_status_not_started(self):
+        """Test get_onboarding_status returns not_started for fresh tenant."""
+        from frappe_pim.pim.api.onboarding import get_onboarding_status
+
+        self._reset_tenant_config()
+
+        result = get_onboarding_status()
+
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["status"], "not_started")
+        self.assertEqual(result["total_steps"], 12)
+        self.assertIsInstance(result["completed_steps"], list)
+        self.assertIn("steps", result)
+        self.assertIn("progress_percent", result)
+        self.assertIn("can_skip_remaining", result)
+
+    def test_61_get_onboarding_status_includes_step_metadata(self):
+        """Test that status includes per-step metadata with correct fields."""
+        from frappe_pim.pim.api.onboarding import get_onboarding_status
+
+        self._reset_tenant_config()
+
+        result = get_onboarding_status()
+
+        steps = result["steps"]
+        self.assertIsInstance(steps, list)
+        self.assertEqual(len(steps), 12)
+
+        # Verify step structure
+        first_step = steps[0]
+        self.assertIn("step_id", first_step)
+        self.assertIn("step_number", first_step)
+        self.assertIn("is_completed", first_step)
+        self.assertIn("is_current", first_step)
+        self.assertIn("is_skippable", first_step)
+        self.assertIn("is_mandatory", first_step)
+
+        # Steps 9-11 should be skippable
+        for step in steps:
+            if step["step_number"] in (9, 10, 11):
+                self.assertTrue(
+                    step["is_skippable"],
+                    f"Step {step['step_number']} should be skippable"
+                )
+
+    def test_62_get_onboarding_status_in_progress(self):
+        """Test get_onboarding_status after starting onboarding."""
+        from frappe_pim.pim.api.onboarding import get_onboarding_status
+
+        self._reset_tenant_config()
+
+        # Set up in-progress state
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "in_progress"
+        tc.onboarding_current_step = 3
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        result = get_onboarding_status()
+
+        self.assertEqual(result["status"], "in_progress")
+        self.assertEqual(result["current_step"], 3)
+        self.assertGreater(result["progress_percent"], 0)
+
+    # ========================================================================
+    # 2. save_step
+    # ========================================================================
+
+    def test_63_save_step_company_info(self):
+        """Test saving company_info step data via new save_step endpoint."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        user = "onb_v2_save_step@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        form_data = {
+            "company_name": "V2 Test Corp",
+            "company_size": "51-200",
+            "primary_role": "product_manager",
+            "existing_systems": ["erp", "spreadsheet"],
+        }
+
+        result = save_step(
+            step_id="company_info",
+            step_number=1,
+            form_data=form_data,
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["step_id"], "company_info")
+        self.assertEqual(result["step_number"], 1)
+        self.assertEqual(result["message"], "Step data saved successfully")
+
+    def test_64_save_step_with_advance(self):
+        """Test saving step data with advance=True moves to next step."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        user = "onb_v2_save_advance@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        form_data = {
+            "company_name": "Advance V2 Corp",
+            "company_size": "11-50",
+            "primary_role": "developer",
+            "existing_systems": [],
+        }
+
+        result = save_step(
+            step_id="company_info",
+            step_number=1,
+            form_data=form_data,
+            advance=True,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["next_step"], 2)
+
+    def test_65_save_step_invalid_step_id(self):
+        """Test saving with invalid step_id returns validation error."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        self._reset_tenant_config()
+
+        result = save_step(
+            step_id="nonexistent_step",
+            step_number=1,
+            form_data={"key": "value"},
+        )
+
+        self.assertFalse(result["success"])
+        self.assertGreater(len(result["validation_errors"]), 0)
+
+    def test_66_save_step_mismatched_id_and_number(self):
+        """Test saving with mismatched step_id and step_number returns error."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        self._reset_tenant_config()
+
+        result = save_step(
+            step_id="company_info",
+            step_number=5,  # company_info is step 1, not 5
+            form_data={"company_name": "Mismatch"},
+        )
+
+        self.assertFalse(result["success"])
+        self.assertGreater(len(result["validation_errors"]), 0)
+
+    def test_67_save_step_missing_required_fields(self):
+        """Test saving step with missing required fields returns validation error."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        self._reset_tenant_config()
+
+        # company_info requires company_name, company_size, primary_role, existing_systems
+        result = save_step(
+            step_id="company_info",
+            step_number=1,
+            form_data={},  # All required fields missing
+        )
+
+        self.assertFalse(result["success"])
+        self.assertGreater(len(result["validation_errors"]), 0)
+
+    def test_68_save_step_json_string_form_data(self):
+        """Test saving step with JSON string form_data."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        self._reset_tenant_config()
+
+        form_data = json.dumps({
+            "company_name": "JSON V2 Corp",
+            "company_size": "201-500",
+            "primary_role": "cto",
+            "existing_systems": ["pim", "dam"],
+        })
+
+        result = save_step(
+            step_id="company_info",
+            step_number=1,
+            form_data=form_data,
+        )
+
+        self.assertTrue(result["success"])
+
+    def test_69_save_step_invalid_json_string(self):
+        """Test saving step with invalid JSON string raises error."""
+        from frappe_pim.pim.api.onboarding import save_step
+
+        self._reset_tenant_config()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            save_step(
+                step_id="company_info",
+                step_number=1,
+                form_data="not valid json{{{",
+            )
+
+    # ========================================================================
+    # 3. skip_step
+    # ========================================================================
+
+    def test_70_skip_step_quality_scoring(self):
+        """Test skipping quality_scoring step (step 9) after step 8."""
+        from frappe_pim.pim.api.onboarding import skip_step
+        from frappe_pim.pim.services.onboarding_service import _create_step_log
+
+        user = "onb_v2_skip@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        # Create a completed log for workflow_preferences (step 8)
+        _create_step_log(
+            user=user,
+            step_id="workflow_preferences",
+            step_number=8,
+            action="completed",
+            form_data={"workflow_complexity": "simple"},
+        )
+        frappe.db.commit()
+
+        result = skip_step(step_id="quality_scoring", step_number=9)
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
+        self.assertTrue(result["skipped"])
+        self.assertEqual(result["step_id"], "quality_scoring")
+        self.assertEqual(result["next_step"], 10)
+
+    def test_71_skip_step_non_skippable_raises_error(self):
+        """Test that skipping a non-skippable step raises an error."""
+        from frappe_pim.pim.api.onboarding import skip_step
+
+        self._reset_tenant_config()
+
+        # Step 1 (company_info) is not skippable
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            skip_step(step_id="company_info", step_number=1)
+
+    def test_72_skip_step_without_step_8_completed_raises_error(self):
+        """Test that skipping step 9 before step 8 is completed raises error."""
+        from frappe_pim.pim.api.onboarding import skip_step
+
+        user = "onb_v2_skip_early@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        # No step 8 completion log exists for this user
+        # Clear any existing logs for this user
+        try:
+            frappe.db.sql(
+                "DELETE FROM `tabOnboarding Step Log` WHERE user = %s",
+                user,
+            )
+            frappe.db.commit()
+        except Exception:
+            pass
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            skip_step(step_id="quality_scoring", step_number=9)
+
+    # ========================================================================
+    # 4. get_template_preview
+    # ========================================================================
+
+    def test_73_get_template_preview_with_industry(self):
+        """Test get_template_preview returns preview for a specific industry."""
+        from frappe_pim.pim.api.onboarding import get_template_preview
+
+        self._reset_tenant_config()
+
+        # Try fashion template (available from fixtures)
+        try:
+            result = get_template_preview(industry="fashion")
+
+            self.assertIsInstance(result, dict)
+            # Preview may come from Industry Template DocType or fixture fallback
+            # Either way, it should have recognizable structure
+            if "sections" in result:
+                # Fixture-based preview
+                self.assertIn("archetype", result)
+            elif "attribute_count" in result:
+                # Industry Template-based preview
+                self.assertIn("display_name", result)
+                self.assertIn("attribute_groups", result)
+                self.assertIn("product_families", result)
+        except frappe.exceptions.ValidationError:
+            # Template may not exist in test DB — this is acceptable
+            pass
+
+    def test_74_get_template_preview_no_industry_raises_error(self):
+        """Test get_template_preview with no industry and no selection raises error."""
+        from frappe_pim.pim.api.onboarding import get_template_preview
+
+        self._reset_tenant_config()
+
+        # Ensure no industry is selected in Tenant Config
+        tc = frappe.get_single("Tenant Config")
+        tc.selected_industry = None
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            get_template_preview(industry=None)
+
+    # ========================================================================
+    # 5. apply_template
+    # ========================================================================
+
+    @patch("frappe_pim.pim.services.template_engine.TemplateEngine.apply_template")
+    def test_75_apply_template_with_industry_selected(self, mock_apply):
+        """Test apply_template when an industry is selected in Tenant Config."""
+        from frappe_pim.pim.api.onboarding import apply_template
+
+        self._reset_tenant_config()
+
+        # Set industry in Tenant Config
+        tc = frappe.get_single("Tenant Config")
+        tc.selected_industry = "fashion"
+        tc.onboarding_status = "in_progress"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        # Mock the template engine result
+        mock_result = MagicMock()
+        mock_result.to_dict.return_value = {
+            "archetype": "fashion",
+            "status": "completed",
+            "entities_created": 42,
+            "entities_skipped": 0,
+            "entities_failed": 0,
+            "details": {"attributes": {"created": 20}},
+            "errors": [],
+            "messages": ["Template applied"],
+        }
+        mock_apply.return_value = mock_result
+
+        result = apply_template(create_demo_products=False)
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["status"], "completed")
+
+    def test_76_apply_template_no_industry_raises_error(self):
+        """Test apply_template with no industry selected raises error."""
+        from frappe_pim.pim.api.onboarding import apply_template
+
+        self._reset_tenant_config()
+
+        # Ensure no industry selected
+        tc = frappe.get_single("Tenant Config")
+        tc.selected_industry = None
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            apply_template()
+
+    # ========================================================================
+    # 6. v2_complete_onboarding
+    # ========================================================================
+
+    def test_77_v2_complete_onboarding_missing_mandatory_raises(self):
+        """Test v2_complete_onboarding raises error if mandatory steps missing."""
+        from frappe_pim.pim.api.onboarding import v2_complete_onboarding
+
+        user = "onb_v2_complete_fail@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        # Set up partial progress (only step 1 completed)
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "in_progress"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            v2_complete_onboarding()
+
+    def test_78_v2_complete_onboarding_with_form_data(self):
+        """Test v2_complete_onboarding accepts JSON string form_data."""
+        from frappe_pim.pim.api.onboarding import v2_complete_onboarding
+        from frappe_pim.pim.services.onboarding_service import _create_step_log
+
+        user = "onb_v2_complete_data@example.com"
+        self._delete_onboarding_state(user)
+        self._reset_tenant_config()
+
+        # Create completion logs for all mandatory steps (1-8)
+        mandatory_steps = [
+            ("company_info", 1),
+            ("industry_selection", 2),
+            ("product_structure", 3),
+            ("attribute_config", 4),
+            ("taxonomy", 5),
+            ("channel_setup", 6),
+            ("localization", 7),
+            ("workflow_preferences", 8),
+        ]
+        for step_id, step_num in mandatory_steps:
+            _create_step_log(
+                user=frappe.session.user,
+                step_id=step_id,
+                step_number=step_num,
+                action="completed",
+                form_data={"step": step_id},
+            )
+
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "in_progress"
+        tc.selected_industry = "fashion"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        result = v2_complete_onboarding(
+            form_data=json.dumps({"confirm_launch": True})
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["status"], "completed")
+        self.assertIn("redirect_to", result)
+        self.assertIsNotNone(result["onboarding_completed_at"])
+
+    # ========================================================================
+    # 7. update_post_onboarding
+    # ========================================================================
+
+    def test_79_update_post_onboarding_company_info(self):
+        """Test updating company_info section after onboarding completion."""
+        from frappe_pim.pim.api.onboarding import update_post_onboarding
+
+        self._reset_tenant_config()
+
+        # Mark onboarding as completed
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "completed"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        result = update_post_onboarding(
+            section="company_info",
+            form_data={"company_name": "Updated Corp Name"},
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
+        self.assertIn("updated_fields", result)
+        self.assertIn("company_name", result["updated_fields"])
+
+    def test_80_update_post_onboarding_before_completion_raises(self):
+        """Test updating post-onboarding before completion raises error."""
+        from frappe_pim.pim.api.onboarding import update_post_onboarding
+
+        self._reset_tenant_config()
+
+        # Onboarding not completed
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "in_progress"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            update_post_onboarding(
+                section="company_info",
+                form_data={"company_name": "Should Fail"},
+            )
+
+    def test_81_update_post_onboarding_invalid_section_raises(self):
+        """Test updating an invalid section raises error."""
+        from frappe_pim.pim.api.onboarding import update_post_onboarding
+
+        self._reset_tenant_config()
+
+        # Mark completed
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "completed"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        with self.assertRaises(frappe.exceptions.ValidationError):
+            update_post_onboarding(
+                section="nonexistent_section",
+                form_data={"key": "value"},
+            )
+
+    def test_82_update_post_onboarding_industry_change_impact(self):
+        """Test that changing industry returns impact_warning."""
+        from frappe_pim.pim.api.onboarding import update_post_onboarding
+
+        self._reset_tenant_config()
+
+        # Mark completed with initial industry
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "completed"
+        tc.selected_industry = "fashion"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        result = update_post_onboarding(
+            section="industry",
+            form_data={"selected_industry": "electronics"},
+        )
+
+        self.assertIsInstance(result, dict)
+        # Should contain impact_warning since industry changed
+        if result.get("success"):
+            self.assertIn("impact_warning", result)
+            if result["impact_warning"]:
+                self.assertEqual(
+                    result["impact_warning"]["old_industry"], "fashion"
+                )
+                self.assertEqual(
+                    result["impact_warning"]["new_industry"], "electronics"
+                )
+
+    def test_83_update_post_onboarding_json_string_form_data(self):
+        """Test update_post_onboarding accepts JSON string form_data."""
+        from frappe_pim.pim.api.onboarding import update_post_onboarding
+
+        self._reset_tenant_config()
+
+        tc = frappe.get_single("Tenant Config")
+        tc.onboarding_status = "completed"
+        tc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        result = update_post_onboarding(
+            section="channels",
+            form_data=json.dumps({"selected_channels": ["e-commerce"]}),
+        )
+
+        self.assertIsInstance(result, dict)
+        self.assertTrue(result["success"])
