@@ -45,6 +45,7 @@ import ChannelStep from './steps/ChannelStep.vue'
 import LocalizationStep from './steps/LocalizationStep.vue'
 import WorkflowStep from './steps/WorkflowStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
+import SummaryLaunchStep from './steps/SummaryLaunchStep.vue'
 
 // ============================================================================
 // Setup
@@ -77,7 +78,7 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
   // quality_scoring: QualityScoringStep,     // Phase 6 — not yet implemented
   // integrations: IntegrationsStep,          // Phase 6 — not yet implemented
   compliance: ComplianceStep,
-  // summary_launch: SummaryLaunchStep,       // Phase 6 — not yet implemented
+  summary_launch: SummaryLaunchStep,
 }
 
 // ============================================================================
