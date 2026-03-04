@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Settings' },
   },
   {
+    path: '/settings/onboarding-configuration',
+    name: 'onboarding-configuration',
+    component: () => import('@/views/settings/OnboardingConfiguration.vue'),
+    meta: { title: 'Onboarding Configuration' },
+  },
+  {
     path: '/list/:doctype',
     name: 'doctype-list',
     component: () => import('@/views/doctype/DocTypeList.vue'),
