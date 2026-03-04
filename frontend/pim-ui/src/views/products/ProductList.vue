@@ -122,8 +122,9 @@ watch(searchInput, (value: string) => {
 // Actions
 // =========================================================================
 
+/** Open product in full Desk-style form (same as other doctypes) */
 function viewProduct(name: string): void {
-  router.push(`/products/${name}`)
+  router.push(`/doc/${encodeURIComponent('Product Master')}/${encodeURIComponent(name)}`)
 }
 
 function createProduct(): void {

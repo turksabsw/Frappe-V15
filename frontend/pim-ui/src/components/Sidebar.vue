@@ -26,10 +26,18 @@ export interface SidebarNavItem {
   visible?: boolean
 }
 
+export interface SidebarNavGroup {
+  label: string
+  icon?: string
+  items: Array<{ label: string; path: string }>
+}
+
 const props = withDefaults(
   defineProps<{
-    /** Navigation items */
+    /** Top navigation items (e.g. Dashboard) */
     navItems: SidebarNavItem[]
+    /** Optional grouped doctype links (Products, Attributes, etc.) */
+    navGroups?: SidebarNavGroup[]
     /** Currently active route path */
     currentPath: string
     /** Whether the sidebar is expanded (for mobile responsive) */
@@ -38,6 +46,7 @@ const props = withDefaults(
     appTitle?: string
   }>(),
   {
+    navGroups: () => [],
     expanded: true,
     appTitle: 'Frappe PIM',
   },
@@ -82,10 +91,10 @@ function handleNavigate(path: string): void {
     />
   </Transition>
 
-  <!-- Sidebar panel -->
+  <!-- Sidebar panel: fixed, full height, nav scrolls independently -->
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-pim-border bg-pim-surface transition-transform duration-200 lg:static lg:translate-x-0',
+      'fixed inset-y-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-pim-border bg-pim-surface transition-transform duration-200 lg:translate-x-0',
       expanded ? 'translate-x-0' : '-translate-x-full',
     ]"
   >
@@ -104,11 +113,12 @@ function handleNavigate(path: string): void {
       </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    <!-- Navigation (flex-1 min-h-0 so it scrolls inside sidebar) -->
+    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <!-- Top-level items (e.g. Dashboard) -->
       <button
         v-for="item in visibleItems"
-        :key="item.path"
+        :key="'top-' + item.path"
         :class="[
           'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
           isActive(item.path)
@@ -213,6 +223,37 @@ function handleNavigate(path: string): void {
           {{ item.badge > 99 ? '99+' : item.badge }}
         </span>
       </button>
+
+      <!-- Grouped doctype links -->
+      <template v-for="(group, gIdx) in navGroups" :key="'group-' + gIdx">
+        <div class="pt-4">
+          <div class="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-pim-muted">
+            {{ group.label }}
+          </div>
+          <button
+            v-for="link in group.items"
+            :key="link.path"
+            :class="[
+              'group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              isActive(link.path)
+                ? 'bg-primary-50 text-primary-700'
+                : 'text-pim-muted hover:bg-gray-50 hover:text-pim-text',
+            ]"
+            @click="handleNavigate(link.path)"
+          >
+            <svg
+              class="h-5 w-5 shrink-0"
+              :class="isActive(link.path) ? 'text-primary-600' : 'text-pim-muted group-hover:text-pim-text'"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="flex-1 truncate text-left">{{ link.label }}</span>
+          </button>
+        </div>
+      </template>
     </nav>
 
     <!-- Footer / Help section -->

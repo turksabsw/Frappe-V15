@@ -19,7 +19,8 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import Sidebar from './Sidebar.vue'
 import TopBar from './TopBar.vue'
-import type { SidebarNavItem } from './Sidebar.vue'
+import type { SidebarNavItem, SidebarNavGroup } from './Sidebar.vue'
+import { PIM_NAV_GROUPS } from '@/config/pimNav'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,6 +49,17 @@ const breadcrumbs = computed(() => {
     crumbs.push({ label: t('nav.products'), path: '/products' })
     const id = route.params.id as string
     crumbs.push({ label: id === 'new' ? t('products.createProduct') : id })
+  } else if (route.name === 'doctype-list') {
+    crumbs.push({ label: t('nav.dashboard'), path: '/' })
+    const dt = route.params.doctype as string
+    crumbs.push({ label: dt ? decodeURIComponent(dt) : 'List' })
+  } else if (route.name === 'doctype-detail') {
+    crumbs.push({ label: t('nav.dashboard'), path: '/' })
+    const dt = route.params.doctype as string
+    const doctypeLabel = dt ? decodeURIComponent(dt) : 'DocType'
+    crumbs.push({ label: doctypeLabel, path: `/list/${encodeURIComponent(doctypeLabel)}` })
+    const nm = route.params.name as string
+    crumbs.push({ label: nm ? decodeURIComponent(nm) : 'Detail' })
   } else if (route.name === 'settings') {
     crumbs.push({ label: t('nav.dashboard'), path: '/' })
     crumbs.push({ label: t('nav.settings') })
@@ -56,24 +68,23 @@ const breadcrumbs = computed(() => {
   return crumbs
 })
 
-/** Navigation items for the sidebar */
+/** Top nav: Dashboard only; doctypes come from navGroups */
 const navItems = computed<SidebarNavItem[]>(() => [
   {
     label: t('nav.dashboard'),
     path: '/',
     icon: 'dashboard',
   },
-  {
-    label: t('nav.products'),
-    path: '/products',
-    icon: 'products',
-  },
-  {
-    label: t('nav.settings'),
-    path: '/settings',
-    icon: 'settings',
-  },
 ])
+
+/** Grouped PIM doctype links for sidebar (Products, Attributes, etc.) */
+const navGroups = computed<SidebarNavGroup[]>(() =>
+  PIM_NAV_GROUPS.map((g) => ({
+    label: g.label,
+    icon: g.icon,
+    items: g.items.map((item) => ({ label: item.label, path: item.path })),
+  })),
+)
 
 function handleNavigate(path: string): void {
   router.push(path)
@@ -96,19 +107,20 @@ function handleSearch(query: string): void {
     <slot />
   </div>
 
-  <!-- Standard layout with sidebar + topbar + content -->
-  <div v-else class="flex min-h-screen bg-pim-bg">
-    <!-- Sidebar -->
+  <!-- Standard layout: sidebar fixed with own scroll, only main content scrolls -->
+  <div v-else class="flex h-screen overflow-hidden bg-pim-bg">
+    <!-- Sidebar (fixed on desktop, own scroll) -->
     <Sidebar
       :nav-items="navItems"
+      :nav-groups="navGroups"
       :current-path="route.path"
       :expanded="appStore.sidebarOpen"
       @navigate="handleNavigate"
       @close="appStore.sidebarOpen = false"
     />
 
-    <!-- Main area (topbar + content) -->
-    <div class="flex flex-1 flex-col overflow-hidden">
+    <!-- Main area (topbar + content); ml-64 so content is beside fixed sidebar on lg -->
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden lg:ml-64">
       <!-- Top bar -->
       <TopBar
         :title="pageTitle"
@@ -121,8 +133,8 @@ function handleSearch(query: string): void {
         @navigate="handleNavigate"
       />
 
-      <!-- Main content area -->
-      <main class="flex-1 overflow-y-auto">
+      <!-- Main content area (only this part scrolls) -->
+      <main class="min-h-0 flex-1 overflow-y-auto">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <slot />
         </div>

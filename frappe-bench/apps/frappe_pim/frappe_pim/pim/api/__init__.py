@@ -64,6 +64,8 @@ from frappe_pim.pim.api.ai import (
     EnrichmentStatus,
 )
 
+from frappe_pim.pim.api.doctype_meta import get_doctype_meta
+
 from frappe_pim.pim.api.brand_portal import (
     # Core Brand Portal API Functions
     submit_product,
@@ -89,6 +91,8 @@ from frappe_pim.pim.api.brand_portal import (
 )
 
 __all__ = [
+    # DocType meta (frontend form rendering)
+    "get_doctype_meta",
     # Quality API
     "get_quality_score",
     "get_channel_readiness",
