@@ -42,6 +42,7 @@ import ProductStructureStep from './steps/ProductStructureStep.vue'
 import AttributeConfigStep from './steps/AttributeConfigStep.vue'
 import TaxonomyStep from './steps/TaxonomyStep.vue'
 import ChannelStep from './steps/ChannelStep.vue'
+import LocalizationStep from './steps/LocalizationStep.vue'
 import WorkflowStep from './steps/WorkflowStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
 
@@ -71,7 +72,7 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
   attribute_config: AttributeConfigStep,
   taxonomy: TaxonomyStep,
   channel_setup: ChannelStep,
-  // localization: LocalizationStep,          // Phase 6 — not yet implemented
+  localization: LocalizationStep,
   workflow_preferences: WorkflowStep,
   // quality_scoring: QualityScoringStep,     // Phase 6 — not yet implemented
   // integrations: IntegrationsStep,          // Phase 6 — not yet implemented
