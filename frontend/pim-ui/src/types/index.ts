@@ -129,7 +129,7 @@ export type {
   VariantGenerationResult,
 } from './product'
 
-// Onboarding types
+// Onboarding types — Legacy (PIM Onboarding State)
 export type {
   OnboardingStepName,
   PIMOnboardingState,
@@ -141,7 +141,6 @@ export type {
   ProductStructureData,
   ChannelSetupData,
   WorkflowPreferencesData,
-  ComplianceSetupData,
   StepFormData,
   ArchetypeInfo,
   AvailableArchetypesResponse,
@@ -152,8 +151,99 @@ export type {
   OnboardingWizardStep,
 } from './onboarding'
 
+// Onboarding types — New 12-step wizard
+export type {
+  WizardStepId,
+  WizardStepConfig,
+  TenantConfig,
+  OnboardingStatus,
+  CompanySize,
+  PrimaryRole,
+  IndustrySector,
+  SkuRange,
+  FamilyCountRange,
+  DataImportSource,
+  CategorySource,
+  BusinessModel,
+  WorkflowComplexity,
+  ErpType,
+  SyncDirection,
+  AiProvider,
+  WizardStepMetadata,
+  OnboardingStatusResponse,
+  StepSaveResponse,
+  StepSkipResponse,
+  StepValidationResult,
+  CompletionResponse,
+  PostOnboardingUpdateResponse,
+  IndustryChangeImpact,
+  PostOnboardingSection,
+  AttributeConfigData,
+  AttributeGroupSelection,
+  AttributeSelection,
+  CustomAttributeDefinition,
+  TaxonomyData,
+  CategoryNode,
+  LocalizationData,
+  QualityScoringData,
+  ScoringWeights,
+  IntegrationsData,
+  ComplianceData,
+  SummaryLaunchData,
+  StepFormDataMap,
+  CompanyCardPreviewData,
+  IndustryProfilePreviewData,
+  ProductDiagramPreviewData,
+  AttributeTreePreviewData,
+  AttributeGroupPreview,
+  CategoryTreePreviewData,
+  ChannelDashPreviewData,
+  ChannelPreview,
+  LocaleGridPreviewData,
+  WorkflowDiagramPreviewData,
+  WorkflowStatePreview,
+  QualityGaugePreviewData,
+  QualityDimensionPreview,
+  IntegrationBoardPreviewData,
+  IntegrationPreview,
+  ComplianceListPreviewData,
+  ComplianceStandardPreview,
+  FullSummaryPreviewData,
+  PreviewDataMap,
+  PreviewData,
+  IndustryTemplate,
+  IndustryTemplateCode,
+  TemplatePreviewResponse,
+  TemplateFamilyPreview,
+  WizardDirection,
+  StepStatus,
+  WizardStepState,
+  WizardState,
+  WizardNavigationPayload,
+  WizardSavePayload,
+  StepFormDataFor,
+  PreviewDataFor,
+} from './onboarding'
+
 // Re-export onboarding constants
-export { ONBOARDING_STEPS, STEP_DATA_FIELDS } from './onboarding'
+export {
+  ONBOARDING_STEPS,
+  STEP_DATA_FIELDS,
+  TOTAL_WIZARD_STEPS,
+  WIZARD_STEP_IDS,
+  SKIPPABLE_STEP_NUMBERS,
+  SKIPPABLE_STEP_IDS,
+  WIZARD_STEP_TO_STATE_STEP,
+  WIZARD_STEP_CONFIGS,
+} from './onboarding'
+
+// Re-export onboarding utility functions
+export {
+  isSkippableStep,
+  getStepNumber,
+  getStepId,
+  getStepConfig,
+} from './onboarding'
 
 // Legacy compatibility: OnboardingStep (used by OnboardingWizard.vue)
 export type { OnboardingWizardStep as OnboardingStep } from './onboarding'
