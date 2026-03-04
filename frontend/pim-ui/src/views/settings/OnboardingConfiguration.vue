@@ -567,6 +567,25 @@ async function executeSave(
 function goBack(): void {
   router.push({ name: 'settings' })
 }
+
+/**
+ * Utility: Format a timestamp for display.
+ */
+function formatTimestamp(iso: string): string {
+  try {
+    const date = new Date(iso)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSec = Math.floor(diffMs / 1000)
+
+    if (diffSec < 60) return 'just now'
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+    return date.toLocaleDateString()
+  } catch {
+    return ''
+  }
+}
 </script>
 
 <template>
@@ -957,23 +976,3 @@ function goBack(): void {
   </div>
 </template>
 
-<script lang="ts">
-/**
- * Utility: Format a timestamp for display.
- */
-function formatTimestamp(iso: string): string {
-  try {
-    const date = new Date(iso)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffSec = Math.floor(diffMs / 1000)
-
-    if (diffSec < 60) return 'just now'
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
-    return date.toLocaleDateString()
-  } catch {
-    return ''
-  }
-}
-</script>

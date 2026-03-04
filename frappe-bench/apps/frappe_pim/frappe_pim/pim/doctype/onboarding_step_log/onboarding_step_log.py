@@ -15,18 +15,20 @@ from typing import Dict, List, Optional, Any
 import json
 
 
-# Valid step identifiers matching the onboarding state machine
+# Valid step identifiers matching the 12-step onboarding wizard
 VALID_STEP_IDS = (
-    "company_info",
-    "industry_selection",
-    "product_structure",
-    "channel_setup",
-    "workflow_preferences",
-    "compliance_setup",
-    "template_applied",
-    "customization_review",
-    "first_data",
-    "guided_tour",
+    "company_info",         # Step 1
+    "industry_selection",   # Step 2
+    "product_structure",    # Step 3
+    "attribute_config",     # Step 4
+    "taxonomy",             # Step 5
+    "channel_setup",        # Step 6
+    "localization",         # Step 7
+    "workflow_preferences", # Step 8
+    "quality_scoring",      # Step 9
+    "integrations",         # Step 10
+    "compliance",           # Step 11
+    "summary_launch",       # Step 12
 )
 
 # Valid actions that can be logged
@@ -121,7 +123,6 @@ def create_step_log(
     started_at: Optional[str] = None,
     time_spent_seconds: Optional[int] = None,
     validation_errors: Optional[str] = None,
-    user: Optional[str] = None,
 ) -> Dict:
     """Create an onboarding step log entry.
 
@@ -133,13 +134,12 @@ def create_step_log(
         started_at: Datetime when the step was started
         time_spent_seconds: Time spent on the step in seconds
         validation_errors: JSON string of validation errors
-        user: User email. Defaults to current session user.
 
     Returns:
         Dict with the created log entry details
     """
-    if not user:
-        user = frappe.session.user
+    # Always use session user for audit integrity — never accept user parameter
+    user = frappe.session.user
 
     doc = frappe.new_doc("Onboarding Step Log")
     doc.user = user
@@ -193,6 +193,10 @@ def get_step_logs(
     """
     if not user:
         user = frappe.session.user
+
+    # Restrict cross-user access to System Manager and PIM Manager roles
+    if user and user != frappe.session.user:
+        frappe.only_for(["System Manager", "PIM Manager"])
 
     filters = {"user": user}
     if step_id:

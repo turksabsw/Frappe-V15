@@ -636,7 +636,12 @@ class OnboardingService:
         # Mark PIM Onboarding State as completed
         if onboarding_state and onboarding_state.current_step != "completed":
             # Advance through remaining steps to reach completed
+            max_iterations = TOTAL_STEPS + 2
+            iteration = 0
             while onboarding_state.current_step != "completed":
+                iteration += 1
+                if iteration > max_iterations:
+                    break
                 try:
                     onboarding_state.advance_step()
                 except Exception:
@@ -1190,7 +1195,10 @@ def _create_step_log(
         doc.insert(ignore_permissions=True)
     except Exception:
         # Non-critical: don't fail the main operation if logging fails
-        pass
+        frappe.log_error(
+            title="Failed to create onboarding step log",
+            message=frappe.get_traceback(),
+        )
 
 
 def _load_industry_template(industry: str) -> Optional[Dict[str, Any]]:

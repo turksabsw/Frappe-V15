@@ -44,6 +44,8 @@ import TaxonomyStep from './steps/TaxonomyStep.vue'
 import ChannelStep from './steps/ChannelStep.vue'
 import LocalizationStep from './steps/LocalizationStep.vue'
 import WorkflowStep from './steps/WorkflowStep.vue'
+import QualityScoringStep from './steps/QualityScoringStep.vue'
+import IntegrationsStep from './steps/IntegrationsStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
 import SummaryLaunchStep from './steps/SummaryLaunchStep.vue'
 
@@ -75,8 +77,8 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
   channel_setup: ChannelStep,
   localization: LocalizationStep,
   workflow_preferences: WorkflowStep,
-  // quality_scoring: QualityScoringStep,     // Phase 6 — not yet implemented
-  // integrations: IntegrationsStep,          // Phase 6 — not yet implemented
+  quality_scoring: QualityScoringStep,
+  integrations: IntegrationsStep,
   compliance: ComplianceStep,
   summary_launch: SummaryLaunchStep,
 }
