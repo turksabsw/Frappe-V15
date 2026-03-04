@@ -6,3 +6,7 @@
 # Install standard attribute types, attribute groups, conflict rules,
 # create onboarding states for existing PIM users, and ensure indexes.
 frappe_pim.patches.v1_0.setup_onboarding_state
+# Initialize Tenant Config singleton with default values for onboarding.
+frappe_pim.patches.v1_0.create_tenant_config
+# Seed all 7 industry sector templates (fashion, industrial, food, etc.)
+frappe_pim.patches.v1_0.seed_industry_templates
