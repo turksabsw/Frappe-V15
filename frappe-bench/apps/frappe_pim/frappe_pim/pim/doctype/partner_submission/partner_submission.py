@@ -558,22 +558,15 @@ def create_item_from_submission(submission_name: str) -> Optional[str]:
         item.stock_uom = "Nos"
         item.is_stock_item = 1
 
-        # PIM fields
-        if hasattr(item, "pim_title"):
-            item.pim_title = doc.product_name
+        # PIM custom fields on Item (custom_field.json fixture uses custom_pim_* prefix)
+        item.description = doc.full_description or doc.short_description or ""
 
-        if hasattr(item, "pim_description"):
-            item.pim_description = doc.full_description or doc.short_description
+        if hasattr(item, "custom_pim_status"):
+            item.custom_pim_status = "Draft"
 
-        if hasattr(item, "pim_status"):
-            item.pim_status = "Draft"
-
-        # Brand
+        # Brand (native Item field)
         if doc.brand:
-            if hasattr(item, "brand"):
-                item.brand = doc.brand
-            if hasattr(item, "pim_brand"):
-                item.pim_brand = doc.brand
+            item.brand = doc.brand
 
         # Barcode
         if doc.barcode:

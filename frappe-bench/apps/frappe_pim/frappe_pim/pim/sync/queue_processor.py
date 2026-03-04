@@ -69,7 +69,7 @@ def process_sync_queue():
                     continue
 
                 frappe.enqueue(
-                    "frappe_pim.pim.tasks.sync.process_single_entry",
+                    "frappe_pim.pim.sync.queue_processor.process_single_entry",
                     queue="default",
                     timeout=300,
                     job_id=job_id,
@@ -187,7 +187,6 @@ def _sync_pim_to_erp(entry):
         dict: {success: bool, erp_document: str, error: str}
     """
     import frappe
-    import json
 
     try:
         doctype_name = entry.doctype_name
@@ -237,7 +236,6 @@ def _sync_erp_to_pim(entry):
         dict: {success: bool, pim_document: str, error: str}
     """
     import frappe
-    import json
 
     try:
         doctype_name = entry.doctype_name
@@ -496,6 +494,7 @@ def _handle_erp_create(doc, entry):
         variant.uom = doc.stock_uom or "Nos"
         variant.erp_item = doc.name
         variant.status = "Draft"
+        variant._from_erpnext_sync = True
         variant.flags.from_erp = True
         variant.insert(ignore_permissions=True)
 
@@ -557,6 +556,7 @@ def _handle_erp_update(doc, entry):
                 has_changes = True
 
         if has_changes:
+            variant._from_erpnext_sync = True
             variant.flags.from_erp = True
             variant.flags.ignore_version = True
             variant.save(ignore_permissions=True)
@@ -716,7 +716,7 @@ def _handle_conflict(entry, conflict, doc):
             # Keep PIM data, skip this sync
             return {
                 "success": True,
-                "message": f"Conflict resolved: PIM wins (skipped ERP update)"
+                "message": "Conflict resolved: PIM wins (skipped ERP update)"
             }
         elif resolution == "erp_wins":
             # Continue with ERP to PIM sync
@@ -807,7 +807,7 @@ def _create_template_item(product_master):
             "is_stock_item": 1
         })
 
-        item.flags.from_pim = True
+        item.flags._from_pim_sync = True
         item.insert(ignore_permissions=True)
 
         # Link back to Product Master
@@ -847,7 +847,7 @@ def _update_template_item(product_master):
 
         if updates:
             item.update(updates)
-            item.flags.from_pim = True
+            item.flags._from_pim_sync = True
             item.save(ignore_permissions=True)
 
     except Exception as e:
@@ -903,7 +903,6 @@ def _mark_entry_completed(entry, result):
         entry: PIM Sync Queue document
         result: Sync result dict
     """
-    import frappe
     from frappe.utils import now_datetime, time_diff_in_seconds
 
     now = now_datetime()
@@ -989,7 +988,7 @@ def cleanup_old_sync_entries():
     sync queue table manageable.
 
     Can also be called manually to free up space:
-        frappe.enqueue("frappe_pim.pim.tasks.sync.cleanup_old_sync_entries")
+        frappe.enqueue("frappe_pim.pim.sync.queue_processor.cleanup_old_sync_entries")
     """
     import frappe
 
@@ -1019,7 +1018,7 @@ def retry_all_failed():
     """Retry all failed sync entries that haven't exceeded max retries.
 
     This utility function can be called manually to retry failed entries:
-        frappe.enqueue("frappe_pim.pim.tasks.sync.retry_all_failed")
+        frappe.enqueue("frappe_pim.pim.sync.queue_processor.retry_all_failed")
 
     Returns:
         int: Number of entries reset for retry

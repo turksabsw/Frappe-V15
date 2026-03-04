@@ -279,17 +279,24 @@ def _get_product_data(product_code: str) -> Dict:
         "disabled": item.disabled,
     }
 
-    # Add PIM custom fields if they exist
-    pim_fields = [
-        "pim_title", "pim_description", "pim_status",
-        "pim_brand", "pim_manufacturer", "pim_completeness",
-        "pim_quality_score", "pim_channel_readiness",
-        "pim_keywords", "pim_meta_description", "pim_bullet_points",
-    ]
+    # Add PIM custom fields if they exist (custom_field.json uses custom_pim_* prefix)
+    pim_field_map = {
+        "custom_pim_status": "pim_status",
+        "custom_pim_long_description": "pim_description",
+        "custom_pim_completeness": "pim_completeness",
+        "custom_pim_data_quality_score": "pim_quality_score",
+        "custom_pim_meta_keywords": "pim_keywords",
+        "custom_pim_meta_description": "pim_meta_description",
+        "custom_pim_seo_title": "pim_seo_title",
+    }
 
-    for pim_field in pim_fields:
-        if hasattr(item, pim_field):
-            product_data[pim_field] = getattr(item, pim_field)
+    for custom_field, output_key in pim_field_map.items():
+        if hasattr(item, custom_field):
+            product_data[output_key] = getattr(item, custom_field)
+
+    # Native Item fields
+    product_data["brand"] = item.brand
+    product_data["manufacturer"] = item.manufacturer
 
     # Check for barcode
     if hasattr(item, 'barcodes') and item.barcodes:

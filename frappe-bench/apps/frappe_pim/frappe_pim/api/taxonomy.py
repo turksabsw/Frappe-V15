@@ -1196,7 +1196,10 @@ def _get_node_suggested_attributes(node) -> List[Dict[str, Any]]:
     try:
         suggestions = frappe.get_all(
             "Node Attribute Suggestion",
-            filters={"parent": node.name},
+            filters={
+                "parent": node.name,
+                "parenttype": "Taxonomy Node"
+            },
             fields=["attribute", "is_required", "sort_order"],
             order_by="sort_order asc"
         )
@@ -1205,7 +1208,7 @@ def _get_node_suggested_attributes(node) -> List[Dict[str, Any]]:
         for sug in suggestions:
             if sug.get("attribute"):
                 attr = frappe.db.get_value(
-                    "Attribute",
+                    "PIM Attribute",
                     sug["attribute"],
                     ["attribute_name", "attribute_type", "attribute_group"],
                     as_dict=True

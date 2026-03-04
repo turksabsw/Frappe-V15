@@ -4,6 +4,7 @@
   "module": "PIM",
   "istable": 1,
   "editable_grid": 1,
+  "track_changes": 0,
 
   "fields": [
     {
@@ -13,7 +14,25 @@
       "options": "PIM Attribute",
       "reqd": 1,
       "in_list_view": 1,
-      "columns": 4
+      "columns": 3
+    },
+    {
+      "fieldname": "is_required",
+      "fieldtype": "Check",
+      "label": "Required",
+      "default": 1,
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Must be specified for every variant"
+    },
+    {
+      "fieldname": "level",
+      "fieldtype": "Int",
+      "label": "Variant Level",
+      "default": 1,
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "1 = first level (e.g., color), 2 = second level (e.g., size)"
     },
     {
       "fieldname": "sort_order",

@@ -1,7 +1,8 @@
 """PIM Product API Endpoints
 
-This module provides API endpoints for Product Master CRUD operations.
-All functions support both synchronous use and whitelisted API access.
+This module provides whitelisted API endpoints for Product Master CRUD operations.
+Product Master is a Virtual DocType backed by ERPNext Item, so all operations
+use the Frappe Document API (not raw SQL) to respect Virtual DocType abstraction.
 
 Endpoints:
 - get_products: List products with filtering and pagination
@@ -9,14 +10,18 @@ Endpoints:
 - create_product: Create a new product
 - update_product: Update an existing product
 - delete_product: Delete a product
-
-Note: frappe imports are deferred to function level to allow module
-import without Frappe being available (e.g., for testing/verification).
+- bulk_update_products: Bulk update a field across multiple products
+- get_product_families: List product families for dropdowns
+- get_product_statuses: List available status options
 """
 
-from datetime import datetime
+import frappe
+from frappe import _
+from typing import Dict, List, Optional, Any
+import json
 
 
+@frappe.whitelist()
 def get_products(
     product_family=None,
     status=None,
@@ -55,10 +60,6 @@ def get_products(
         >>> result = get_products(status="Active", page=1, page_size=20)
         >>> print(f"Found {result['total']} products")
     """
-    import frappe
-    from frappe import _
-    import json
-
     # Permission check
     if not frappe.has_permission("Product Master", "read"):
         frappe.throw(_("Not permitted to read products"), frappe.PermissionError)
@@ -120,23 +121,35 @@ def get_products(
 
     order_dir = "desc" if order_dir.lower() not in ["asc", "desc"] else order_dir.lower()
 
-    # Get total count
-    total = frappe.db.count("Product Master", filters=filters, or_filters=or_filters)
+    # Get total count - use frappe.get_all with limit_page_length=0
+    # because Product Master is a Virtual DocType (no tabProduct Master table)
+    count_args = {
+        "filters": filters,
+        "fields": ["name"],
+        "limit_page_length": 0
+    }
+    if or_filters:
+        count_args["or_filters"] = or_filters
+
+    all_names = frappe.get_all("Product Master", **count_args)
+    total = len(all_names)
 
     # Calculate pagination
     start = (page - 1) * page_size
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
-    # Get products
-    products = frappe.get_all(
-        "Product Master",
-        filters=filters,
-        or_filters=or_filters,
-        fields=fields,
-        order_by=f"{order_by} {order_dir}",
-        start=start,
-        page_length=page_size
-    )
+    # Get paginated products
+    list_args = {
+        "filters": filters,
+        "fields": fields,
+        "order_by": f"{order_by} {order_dir}",
+        "start": start,
+        "page_length": page_size
+    }
+    if or_filters:
+        list_args["or_filters"] = or_filters
+
+    products = frappe.get_all("Product Master", **list_args)
 
     return {
         "products": products,
@@ -147,6 +160,7 @@ def get_products(
     }
 
 
+@frappe.whitelist()
 def get_product_detail(name, include_attributes=True, include_media=True, include_variants=False):
     """Get full product details including attributes and media.
 
@@ -163,9 +177,6 @@ def get_product_detail(name, include_attributes=True, include_media=True, includ
         >>> product = get_product_detail("PROD-001", include_variants=True)
         >>> print(product["product_name"])
     """
-    import frappe
-    from frappe import _
-
     if not frappe.has_permission("Product Master", "read"):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
 
@@ -191,6 +202,11 @@ def get_product_detail(name, include_attributes=True, include_media=True, includ
         "modified_by": doc.modified_by
     }
 
+    # Convert string booleans from API calls
+    include_attributes = _to_bool(include_attributes)
+    include_media = _to_bool(include_media)
+    include_variants = _to_bool(include_variants)
+
     # Include EAV attributes
     if include_attributes:
         product["attributes"] = _get_product_attributes(doc)
@@ -206,6 +222,7 @@ def get_product_detail(name, include_attributes=True, include_media=True, includ
     return product
 
 
+@frappe.whitelist()
 def create_product(
     product_name,
     product_code=None,
@@ -239,10 +256,6 @@ def create_product(
         ... )
         >>> print(result["name"])
     """
-    import frappe
-    from frappe import _
-    import json
-
     if not frappe.has_permission("Product Master", "create"):
         frappe.throw(_("Not permitted to create products"), frappe.PermissionError)
 
@@ -278,7 +291,7 @@ def create_product(
     if image:
         doc_data["image"] = image
 
-    # Create document
+    # Create document via Virtual DocType (creates ERPNext Item under the hood)
     try:
         doc = frappe.get_doc(doc_data)
         doc.insert()
@@ -300,7 +313,7 @@ def create_product(
             "completeness_score": doc.completeness_score
         }
 
-    except frappe.DuplicateEntryError as e:
+    except frappe.DuplicateEntryError:
         frappe.throw(
             _("A product with this code already exists"),
             title=_("Duplicate Product Code")
@@ -316,6 +329,7 @@ def create_product(
         )
 
 
+@frappe.whitelist()
 def update_product(
     name,
     product_name=None,
@@ -352,10 +366,6 @@ def update_product(
         ...     attributes={"color": "Red"}
         ... )
     """
-    import frappe
-    from frappe import _
-    import json
-
     if not frappe.has_permission("Product Master", "write"):
         frappe.throw(_("Not permitted to update products"), frappe.PermissionError)
 
@@ -430,6 +440,7 @@ def update_product(
         )
 
 
+@frappe.whitelist()
 def delete_product(name, force=False):
     """Delete a product.
 
@@ -444,18 +455,20 @@ def delete_product(name, force=False):
         >>> result = delete_product("PROD-001")
         >>> print(result["message"])
     """
-    import frappe
-    from frappe import _
-
     if not frappe.has_permission("Product Master", "delete"):
         frappe.throw(_("Not permitted to delete products"), frappe.PermissionError)
 
-    # Check if product exists
-    if not frappe.db.exists("Product Master", name):
+    # Verify product exists via Virtual DocType
+    try:
+        frappe.get_doc("Product Master", name)
+    except frappe.DoesNotExistError:
         frappe.throw(_("Product '{0}' not found").format(name), frappe.DoesNotExistError)
 
+    # Convert string boolean from API calls
+    force = _to_bool(force)
+
     # Check for linked variants
-    variant_count = frappe.db.count("Product Variant", {"product_master": name})
+    variant_count = frappe.db.count("Product Variant", {"parent_product": name})
     if variant_count > 0 and not force:
         frappe.throw(
             _("Cannot delete product with {0} linked variant(s). Use force=True to delete anyway.").format(variant_count),
@@ -467,13 +480,13 @@ def delete_product(name, force=False):
         if variant_count > 0 and force:
             variants = frappe.get_all(
                 "Product Variant",
-                filters={"product_master": name},
+                filters={"parent_product": name},
                 pluck="name"
             )
             for variant in variants:
                 frappe.delete_doc("Product Variant", variant, ignore_permissions=True)
 
-        # Delete the product
+        # Delete the product (Virtual DocType handles Item deletion)
         frappe.delete_doc("Product Master", name)
         frappe.db.commit()
 
@@ -494,6 +507,7 @@ def delete_product(name, force=False):
         )
 
 
+@frappe.whitelist()
 def bulk_update_products(products, field, value):
     """Bulk update a field across multiple products.
 
@@ -512,10 +526,6 @@ def bulk_update_products(products, field, value):
         ...     value="Active"
         ... )
     """
-    import frappe
-    from frappe import _
-    import json
-
     if not frappe.has_permission("Product Master", "write"):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
 
@@ -537,11 +547,13 @@ def bulk_update_products(products, field, value):
 
     for product_name in products:
         try:
-            if frappe.db.exists("Product Master", product_name):
-                frappe.db.set_value("Product Master", product_name, field, value)
-                updated += 1
-            else:
-                errors.append(f"{product_name}: not found")
+            # Use Document API for Virtual DocType compatibility
+            doc = frappe.get_doc("Product Master", product_name)
+            doc.set(field, value)
+            doc.save(ignore_permissions=True)
+            updated += 1
+        except frappe.DoesNotExistError:
+            errors.append(f"{product_name}: not found")
         except Exception as e:
             errors.append(f"{product_name}: {str(e)}")
             frappe.log_error(
@@ -559,36 +571,35 @@ def bulk_update_products(products, field, value):
     }
 
 
+@frappe.whitelist()
 def get_product_families():
     """Get list of Product Families for dropdowns/filters.
 
     Returns:
-        list: Product Family records with name and label
+        list: Product Family records with name, label, and parent
     """
-    import frappe
-    from frappe import _
-
     if not frappe.has_permission("Product Family", "read"):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
 
     return frappe.get_all(
         "Product Family",
-        fields=["name", "family_name", "parent_product_family"],
-        order_by="family_name asc"
+        fields=["name", "family_name", "parent_family", "is_group"],
+        order_by="lft asc"
     )
 
 
+@frappe.whitelist(allow_guest=True)
 def get_product_statuses():
     """Get available product status options.
 
     Returns:
-        list: Status options
+        list: Status options with value and label
     """
     return [
-        {"value": "Draft", "label": "Draft"},
-        {"value": "Active", "label": "Active"},
-        {"value": "Inactive", "label": "Inactive"},
-        {"value": "Archived", "label": "Archived"}
+        {"value": "Draft", "label": _("Draft")},
+        {"value": "Active", "label": _("Active")},
+        {"value": "Inactive", "label": _("Inactive")},
+        {"value": "Archived", "label": _("Archived")}
     ]
 
 
@@ -596,8 +607,28 @@ def get_product_statuses():
 # Internal Helper Functions
 # ============================================================================
 
+def _to_bool(value):
+    """Convert a value to boolean, handling string representations from API calls.
+
+    Args:
+        value: Value to convert (bool, int, str)
+
+    Returns:
+        bool: Converted boolean value
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
+
+
 def _get_product_attributes(doc):
     """Extract attributes from product document as dict.
+
+    Handles all 9 EAV value columns:
+    value_text, value_long_text, value_int, value_float, value_boolean,
+    value_date, value_datetime, value_link, value_json
 
     Args:
         doc: Product Master document
@@ -605,8 +636,6 @@ def _get_product_attributes(doc):
     Returns:
         dict: Attribute code -> value mapping with metadata
     """
-    import frappe
-
     attributes = {}
 
     for attr_row in (doc.get("attribute_values") or []):
@@ -614,11 +643,18 @@ def _get_product_attributes(doc):
         if not attr_code:
             continue
 
-        # Determine value from appropriate column
+        # Determine value from appropriate column based on priority
         value = None
         value_type = "text"
 
-        if attr_row.get("value_text"):
+        # Check each value column in priority order
+        if attr_row.get("value_json"):
+            value = attr_row.value_json
+            value_type = "json"
+        elif attr_row.get("value_long_text"):
+            value = attr_row.value_long_text
+            value_type = "long_text"
+        elif attr_row.get("value_text"):
             value = attr_row.value_text
             value_type = "text"
         elif attr_row.get("value_int") is not None:
@@ -628,8 +664,11 @@ def _get_product_attributes(doc):
             value = attr_row.value_float
             value_type = "float"
         elif attr_row.get("value_boolean") is not None:
-            value = attr_row.value_boolean
+            value = bool(attr_row.value_boolean)
             value_type = "boolean"
+        elif attr_row.get("value_datetime"):
+            value = str(attr_row.value_datetime)
+            value_type = "datetime"
         elif attr_row.get("value_date"):
             value = str(attr_row.value_date)
             value_type = "date"
@@ -651,9 +690,14 @@ def _get_product_attributes(doc):
         attributes[attr_code] = {
             "value": value,
             "value_type": value_type,
+            "display_value": attr_row.get("display_value") or value,
             "label": attr_meta.get("attribute_name", attr_code),
             "data_type": attr_meta.get("data_type"),
-            "group": attr_meta.get("attribute_group")
+            "group": attr_meta.get("attribute_group"),
+            "unit": attr_row.get("unit"),
+            "source": attr_row.get("source"),
+            "locale": attr_row.get("locale"),
+            "is_inherited": attr_row.get("is_inherited", False)
         }
 
     return attributes
@@ -666,7 +710,7 @@ def _get_product_media_list(doc):
         doc: Product Master document
 
     Returns:
-        list: Media items
+        list: Media items with type, URL, and metadata
     """
     media_list = []
 
@@ -685,47 +729,88 @@ def _get_product_media_list(doc):
             "type": media.get("media_type", "image"),
             "url": media.get("file_url"),
             "title": media.get("title"),
+            "alt_text": media.get("alt_text"),
             "is_primary": False,
-            "sort_order": idx
+            "sort_order": media.get("sort_order", idx)
         })
 
     return media_list
 
 
-def _get_product_variants(product_master):
-    """Get variants for a product.
+def _get_product_variants(parent_product):
+    """Get variants for a product with their axis values.
+
+    Uses the axis_values child table (Product Variant Axis Value)
+    rather than flat variant_attribute fields.
 
     Args:
-        product_master: Product Master name
+        parent_product: Product Master name (Item name)
 
     Returns:
-        list: Variant records
+        list: Variant records with nested axis_values
     """
-    import frappe
-
-    return frappe.get_all(
+    variants = frappe.get_all(
         "Product Variant",
-        filters={"product_master": product_master},
+        filters={"parent_product": parent_product},
         fields=[
             "name", "variant_name", "variant_code", "status",
-            "variant_attribute_1", "variant_value_1",
-            "variant_attribute_2", "variant_value_2",
-            "variant_attribute_3", "variant_value_3",
-            "barcode", "price_override", "completeness_score", "image"
+            "variant_level", "completeness_score", "image",
+            "erp_item", "description"
         ],
         order_by="variant_code asc"
     )
 
+    # Enrich each variant with its axis values
+    for variant in variants:
+        axis_values = frappe.get_all(
+            "Product Variant Axis Value",
+            filters={"parent": variant["name"]},
+            fields=["attribute", "attribute_value", "display_value", "option"],
+            order_by="idx asc"
+        )
+        variant["axis_values"] = axis_values
+
+    return variants
+
+
+# EAV data type to value column mapping
+# Matches PIM Attribute's DATA_TYPE_TO_VALUE_COLUMN mapping
+_DATA_TYPE_TO_COLUMN = {
+    "Text": "value_text",
+    "Short Text": "value_text",
+    "Select": "value_text",
+    "Textarea": "value_long_text",
+    "HTML": "value_long_text",
+    "Rich Text": "value_long_text",
+    "Long Text": "value_long_text",
+    "Integer": "value_int",
+    "Float": "value_float",
+    "Currency": "value_float",
+    "Percent": "value_float",
+    "Boolean": "value_boolean",
+    "Date": "value_date",
+    "Datetime": "value_datetime",
+    "Link": "value_link",
+    "JSON": "value_json",
+}
+
+# All value columns that need to be cleared before setting a new value
+_ALL_VALUE_COLUMNS = [
+    "value_text", "value_long_text", "value_int", "value_float",
+    "value_boolean", "value_date", "value_datetime", "value_link",
+    "value_json"
+]
+
 
 def _set_product_attributes(doc, attributes):
-    """Set attribute values on a product document.
+    """Set attribute values on a product document using EAV pattern.
+
+    Handles all 12 data types via the appropriate value column.
 
     Args:
         doc: Product Master document
         attributes: Dict of attribute_code -> value mappings
     """
-    import frappe
-
     if not attributes:
         return
 
@@ -750,58 +835,33 @@ def _set_product_attributes(doc, attributes):
             row = doc.append("attribute_values", {"attribute": attr_code})
 
         # Clear all value columns first
-        row.value_text = None
-        row.value_int = None
-        row.value_float = None
-        row.value_boolean = None
-        row.value_date = None
-        row.value_link = None
+        for col in _ALL_VALUE_COLUMNS:
+            row.set(col, None)
 
-        # Set value in appropriate column based on data type
+        # Skip if value is None (attribute cleared)
         if value is None:
             continue
 
-        if data_type in ["Text", "Textarea", "HTML", "Select"]:
-            row.value_text = str(value)
-        elif data_type == "Integer":
+        # Determine target column from data type
+        column = _DATA_TYPE_TO_COLUMN.get(data_type, "value_text")
+
+        # Set value with appropriate type coercion
+        if column == "value_int":
             row.value_int = int(value)
-        elif data_type in ["Float", "Currency", "Percent"]:
+        elif column == "value_float":
             row.value_float = float(value)
-        elif data_type == "Boolean":
-            row.value_boolean = bool(value)
-        elif data_type == "Date":
+        elif column == "value_boolean":
+            row.value_boolean = _to_bool(value)
+        elif column == "value_date":
             row.value_date = value
-        elif data_type == "Link":
+        elif column == "value_datetime":
+            row.value_datetime = value
+        elif column == "value_json":
+            row.value_json = value if isinstance(value, str) else json.dumps(value)
+        elif column == "value_link":
             row.value_link = str(value)
+        elif column == "value_long_text":
+            row.value_long_text = str(value)
         else:
-            # Default to text
+            # Default: value_text
             row.value_text = str(value)
-
-
-# ============================================================================
-# Whitelist Wrapper
-# ============================================================================
-
-def _wrap_for_whitelist():
-    """Add @frappe.whitelist() decorators at runtime."""
-    import frappe
-
-    global get_products, get_product_detail, create_product, update_product
-    global delete_product, bulk_update_products, get_product_families
-    global get_product_statuses
-
-    get_products = frappe.whitelist()(get_products)
-    get_product_detail = frappe.whitelist()(get_product_detail)
-    create_product = frappe.whitelist()(create_product)
-    update_product = frappe.whitelist()(update_product)
-    delete_product = frappe.whitelist()(delete_product)
-    bulk_update_products = frappe.whitelist()(bulk_update_products)
-    get_product_families = frappe.whitelist()(get_product_families)
-    get_product_statuses = frappe.whitelist(allow_guest=True)(get_product_statuses)
-
-
-# Apply whitelist decorators if frappe is available
-try:
-    _wrap_for_whitelist()
-except ImportError:
-    pass  # Decorators will be added when module is used in Frappe context

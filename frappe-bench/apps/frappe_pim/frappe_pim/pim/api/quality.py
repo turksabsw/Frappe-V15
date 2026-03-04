@@ -104,26 +104,24 @@ REQUIRED_FIELDS = [
 
 # Recommended fields for better quality score
 RECOMMENDED_FIELDS = [
-    "pim_title",
-    "pim_description",
-    "brand",
-    "pim_brand",
+    "item_name",
     "description",
+    "brand",
+    "custom_pim_long_description",
     "standard_rate",
     "weight_per_unit",
     "stock_uom",
 ]
 
-# PIM-specific fields
+# PIM-specific custom fields on Item (custom_field.json fixture uses custom_pim_* prefix)
 PIM_FIELDS = [
-    "pim_title",
-    "pim_description",
-    "pim_status",
-    "pim_brand",
-    "pim_manufacturer",
-    "pim_completeness",
-    "pim_quality_score",
-    "pim_channel_readiness",
+    "custom_pim_status",
+    "custom_pim_long_description",
+    "custom_pim_completeness",
+    "custom_pim_product_family",
+    "custom_pim_product_type",
+    "custom_pim_seo_title",
+    "custom_pim_meta_description",
 ]
 
 # Field weights for quality scoring (0-1)
@@ -133,14 +131,13 @@ FIELD_WEIGHTS = {
     "item_name": 0.10,
     "item_group": 0.08,
     # PIM core fields
-    "pim_title": 0.12,
-    "pim_description": 0.15,
-    "pim_status": 0.05,
+    "description": 0.15,
+    "custom_pim_long_description": 0.12,
+    "custom_pim_status": 0.05,
     # Product details
     "brand": 0.08,
-    "pim_brand": 0.05,
-    "pim_manufacturer": 0.03,
-    "description": 0.05,
+    "manufacturer": 0.05,
+    "custom_pim_product_family": 0.03,
     # Pricing and inventory
     "standard_rate": 0.08,
     "weight_per_unit": 0.03,
@@ -153,8 +150,8 @@ FIELD_WEIGHTS = {
 CHANNEL_REQUIRED_FIELDS = {
     "amazon": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "brand",
         "barcode",
         "standard_rate",
@@ -162,8 +159,8 @@ CHANNEL_REQUIRED_FIELDS = {
     ],
     "amazon_us": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "brand",
         "barcode",
         "standard_rate",
@@ -171,21 +168,21 @@ CHANNEL_REQUIRED_FIELDS = {
     ],
     "shopify": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "standard_rate",
     ],
     "ebay": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "item_group",
         "standard_rate",
     ],
     "walmart": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "brand",
         "barcode",
         "standard_rate",
@@ -193,8 +190,8 @@ CHANNEL_REQUIRED_FIELDS = {
     ],
     "trendyol": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "brand",
         "barcode",
         "standard_rate",
@@ -202,15 +199,15 @@ CHANNEL_REQUIRED_FIELDS = {
     ],
     "n11": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "standard_rate",
         "item_group",
     ],
     "hepsiburada": [
         "item_code",
-        "pim_title",
-        "pim_description",
+        "item_name",
+        "description",
         "brand",
         "barcode",
         "standard_rate",
@@ -221,8 +218,8 @@ CHANNEL_REQUIRED_FIELDS = {
 # Default channel requirements for unknown channels
 DEFAULT_CHANNEL_FIELDS = [
     "item_code",
-    "pim_title",
-    "pim_description",
+    "item_name",
+    "description",
     "standard_rate",
 ]
 
@@ -564,8 +561,8 @@ def get_quality_score(product_code: str) -> Dict:
                 frappe.db.set_value(
                     "Item", product_code,
                     {
-                        "pim_quality_score": score_result.score,
-                        "pim_completeness": score_result.completeness,
+                        "custom_pim_data_quality_score": score_result.score,
+                        "custom_pim_completeness": score_result.completeness,
                     },
                     update_modified=False
                 )
@@ -644,7 +641,7 @@ def get_missing_fields(product_code: str, channel: str = None) -> Dict:
 
     Example:
         result = get_missing_fields("PROD-001")
-        # Returns: {"missing_required": ["brand"], "missing_recommended": ["pim_description"]}
+        # Returns: {"missing_required": ["brand"], "missing_recommended": ["description"]}
 
         result = get_missing_fields("PROD-001", "amazon")
         # Returns channel-specific missing fields
@@ -762,11 +759,11 @@ def calculate_quality_score(product_data: Dict) -> QualityScore:
     # Validate content quality for populated fields
 
     # Title length check
-    title = product_data.get("pim_title") or product_data.get("item_name")
+    title = product_data.get("item_name") or ""
     if title:
         if len(title) < MIN_TITLE_LENGTH:
             issues.append(QualityIssue(
-                field="pim_title",
+                field="item_name",
                 issue_type=IssueType.INVALID_LENGTH,
                 severity=IssueSeverity.WARNING,
                 message=f"Title is too short (min {MIN_TITLE_LENGTH} characters)",
@@ -774,35 +771,35 @@ def calculate_quality_score(product_data: Dict) -> QualityScore:
                 expected_value=MIN_TITLE_LENGTH,
             ))
             # Reduce field score
-            if "pim_title" in field_scores:
-                field_scores["pim_title"] = 50
+            if "item_name" in field_scores:
+                field_scores["item_name"] = 50
 
         if len(title) > MAX_TITLE_LENGTH:
             issues.append(QualityIssue(
-                field="pim_title",
+                field="item_name",
                 issue_type=IssueType.INVALID_LENGTH,
                 severity=IssueSeverity.WARNING,
                 message=f"Title is too long (max {MAX_TITLE_LENGTH} characters)",
                 current_value=len(title),
                 expected_value=MAX_TITLE_LENGTH,
             ))
-            if "pim_title" in field_scores:
-                field_scores["pim_title"] = 70
+            if "item_name" in field_scores:
+                field_scores["item_name"] = 70
 
     # Description length check
-    description = product_data.get("pim_description") or product_data.get("description")
+    description = product_data.get("description") or product_data.get("custom_pim_long_description") or ""
     if description:
         if len(description) < MIN_DESCRIPTION_LENGTH:
             issues.append(QualityIssue(
-                field="pim_description",
+                field="description",
                 issue_type=IssueType.SHORT_DESCRIPTION,
                 severity=IssueSeverity.WARNING,
                 message=f"Description is too short (min {MIN_DESCRIPTION_LENGTH} characters)",
                 current_value=len(description),
                 expected_value=MIN_DESCRIPTION_LENGTH,
             ))
-            if "pim_description" in field_scores:
-                field_scores["pim_description"] = 60
+            if "description" in field_scores:
+                field_scores["description"] = 60
 
     # GTIN validation
     barcode = product_data.get("barcode")

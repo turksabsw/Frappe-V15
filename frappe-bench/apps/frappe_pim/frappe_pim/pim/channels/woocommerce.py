@@ -888,7 +888,7 @@ class WooCommerceAdapter(ChannelAdapter):
             mapped_data["type"] = WooCommerceProductType.SIMPLE.value
 
         # Status
-        status = product.get("status") or product.get("pim_status")
+        status = product.get("status") or product.get("custom_pim_status")
         if status:
             status_upper = str(status).upper()
             if status_upper in ("PUBLISH", "PUBLISHED", "ACTIVE", "ENABLED"):
@@ -1032,7 +1032,7 @@ class WooCommerceAdapter(ChannelAdapter):
         mapped_pim_fields = set(PIM_TO_WOOCOMMERCE_FIELDS.keys())
         mapped_pim_fields.update({
             "name", "slug", "handle", "sku", "description", "short_description",
-            "status", "pim_status", "regular_price", "price", "standard_rate",
+            "status", "custom_pim_status", "regular_price", "price", "standard_rate",
             "sale_price", "date_on_sale_from", "date_on_sale_to",
             "sale_start_date", "sale_end_date", "manage_stock",
             "stock_quantity", "stock_qty", "actual_qty", "stock_status",
@@ -1242,9 +1242,9 @@ class WooCommerceAdapter(ChannelAdapter):
 
         # Map PIM-specific fields
         pim_fields = {
-            "pim_completeness": "_pim_completeness",
-            "pim_quality_score": "_pim_quality_score",
-            "pim_source": "_pim_source",
+            "custom_pim_completeness": "_pim_completeness",
+            "custom_pim_data_quality_score": "_pim_quality_score",
+            "custom_pim_source_system": "_pim_source",
         }
 
         for pim_field, meta_key in pim_fields.items():

@@ -11,6 +11,7 @@ This module contains service classes for external integrations and background op
 - image_variants: Channel-specific image variants generation service
 - merge_survive: MDM merge/survive service for product deduplication
 - print_catalog: Print catalog generator using Frappe print formats with PDF output
+- quality_scorer: Unified quality scoring service wrapping completeness and scoring utilities
 """
 
 from frappe_pim.pim.services.gdsn_sync import (
@@ -252,6 +253,20 @@ from frappe_pim.pim.services.print_catalog import (
     get_page_sizes,
     get_sort_options,
     preview_catalog,
+)
+
+from frappe_pim.pim.services.quality_scorer import (
+    QualityScorer,
+    QualityLevel,
+    MissingField,
+    DimensionScore,
+    QualityScore,
+    QualityReport,
+    QUALITY_THRESHOLDS,
+    DEFAULT_DIMENSION_WEIGHTS,
+    calculate_score as calculate_quality_score,
+    get_missing_fields,
+    get_quality_report,
 )
 
 __all__ = [
@@ -497,4 +512,19 @@ __all__ = [
     "get_page_sizes",
     "get_sort_options",
     "preview_catalog",
+    # Quality Scorer Classes
+    "QualityScorer",
+    "MissingField",
+    "DimensionScore",
+    "QualityScore",
+    "QualityReport",
+    # Quality Scorer Enums
+    "QualityLevel",
+    # Quality Scorer Constants
+    "QUALITY_THRESHOLDS",
+    "DEFAULT_DIMENSION_WEIGHTS",
+    # Quality Scorer Functions
+    "calculate_quality_score",
+    "get_missing_fields",
+    "get_quality_report",
 ]

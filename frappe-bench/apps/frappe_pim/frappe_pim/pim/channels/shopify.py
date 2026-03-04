@@ -891,7 +891,7 @@ class ShopifyAdapter(ChannelAdapter):
                 mapped_data["tags"] = tags
 
         # Status
-        status = product.get("status") or product.get("pim_status")
+        status = product.get("status") or product.get("custom_pim_status")
         if status:
             status_upper = str(status).upper()
             if status_upper in ("ACTIVE", "PUBLISHED", "ENABLED"):
@@ -932,7 +932,7 @@ class ShopifyAdapter(ChannelAdapter):
         mapped_pim_fields = set(PIM_TO_SHOPIFY_FIELDS.keys())
         mapped_pim_fields.update({
             "title", "description", "vendor", "product_type", "productType",
-            "handle", "tags", "status", "pim_status", "seo_title", "meta_title",
+            "handle", "tags", "status", "custom_pim_status", "seo_title", "meta_title",
             "seo_description", "meta_description", "images", "image",
             "sku", "price", "standard_rate", "compare_at_price", "barcode",
             "weight", "weight_per_unit", "net_weight", "weight_unit",
@@ -1077,8 +1077,8 @@ class ShopifyAdapter(ChannelAdapter):
         custom_field_mappings = {
             "custom_field_1": ("custom", "field_1", "single_line_text_field"),
             "custom_field_2": ("custom", "field_2", "single_line_text_field"),
-            "pim_completeness": ("pim", "completeness", "number_decimal"),
-            "pim_quality_score": ("pim", "quality_score", "number_decimal"),
+            "custom_pim_completeness": ("pim", "completeness", "number_decimal"),
+            "custom_pim_data_quality_score": ("pim", "quality_score", "number_decimal"),
         }
 
         for field_name, (namespace, key, value_type) in custom_field_mappings.items():

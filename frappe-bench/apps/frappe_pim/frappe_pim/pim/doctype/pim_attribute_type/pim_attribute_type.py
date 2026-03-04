@@ -1,12 +1,25 @@
 """
 PIM Attribute Type Controller
-Defines attribute data types for the PIM system with validation rules
+Defines attribute data types for the PIM system with validation rules.
+
+Standard types (12): Text, Long Text, Rich Text, Number, Integer, Select,
+Multi Select, Color, Boolean, Date, Datetime, Measurement
 """
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate, get_datetime
+from typing import Any, Dict, List, Optional
 import re
+import json
+
+
+# All 7 supported base types
+VALID_BASE_TYPES = ("String", "Integer", "Float", "Boolean", "Date", "Datetime", "JSON")
+
+# Total count of standard attribute types shipped out-of-the-box
+STANDARD_TYPE_COUNT = 12
 
 
 class PIMAttributeType(Document):
@@ -37,7 +50,7 @@ class PIMAttributeType(Document):
                 )
 
         # Only numeric base types should have min/max values
-        if self.base_type not in ['Integer', 'Float']:
+        if self.base_type not in ('Integer', 'Float'):
             if self.min_value is not None or self.max_value is not None:
                 frappe.msgprint(
                     _("Min/Max values are only applicable to numeric types. They will be ignored."),
@@ -58,11 +71,11 @@ class PIMAttributeType(Document):
     def before_save(self):
         """Clean up fields based on base type"""
         # Clear irrelevant fields based on base type
-        if self.base_type not in ['Integer', 'Float']:
+        if self.base_type not in ('Integer', 'Float'):
             self.min_value = None
             self.max_value = None
 
-        if self.base_type not in ['String']:
+        if self.base_type != 'String':
             self.max_length = None
 
         if not self.supports_unit:
@@ -98,8 +111,11 @@ class PIMAttributeType(Document):
         except (ImportError, AttributeError):
             pass
 
-    def validate_value(self, value):
-        """Validate a value against this attribute type's constraints
+    def validate_value(self, value: Any) -> Dict:
+        """Validate a value against this attribute type's constraints.
+
+        Supports all 7 base types: String, Integer, Float, Boolean, Date,
+        Datetime, JSON.
 
         Args:
             value: The value to validate
@@ -112,7 +128,7 @@ class PIMAttributeType(Document):
         if value is None or value == '':
             return {"valid": True, "errors": []}
 
-        # Regex validation
+        # Regex validation (applied before type-specific checks)
         if self.validation_regex:
             if not re.match(self.validation_regex, str(value)):
                 msg = self.validation_message or _("Value does not match required format")
@@ -123,9 +139,9 @@ class PIMAttributeType(Document):
             try:
                 int_val = int(value)
                 if self.min_value is not None and int_val < self.min_value:
-                    errors.append(_("Value must be at least {0}").format(self.min_value))
+                    errors.append(_("Value must be at least {0}").format(int(self.min_value)))
                 if self.max_value is not None and int_val > self.max_value:
-                    errors.append(_("Value must be at most {0}").format(self.max_value))
+                    errors.append(_("Value must be at most {0}").format(int(self.max_value)))
             except (ValueError, TypeError):
                 errors.append(_("Value must be an integer"))
 
@@ -140,36 +156,91 @@ class PIMAttributeType(Document):
                 errors.append(_("Value must be a number"))
 
         elif self.base_type == 'String':
-            if self.max_length and len(str(value)) > self.max_length:
+            str_val = str(value)
+            if self.max_length and len(str_val) > self.max_length:
                 errors.append(_("Value exceeds maximum length of {0}").format(self.max_length))
 
         elif self.base_type == 'Boolean':
-            if str(value).lower() not in ['true', 'false', '1', '0', 'yes', 'no']:
+            if str(value).lower() not in ('true', 'false', '1', '0', 'yes', 'no'):
                 errors.append(_("Value must be a boolean (true/false)"))
+
+        elif self.base_type == 'Date':
+            try:
+                if isinstance(value, str):
+                    getdate(value)
+            except Exception:
+                errors.append(_("Value must be a valid date (YYYY-MM-DD)"))
+
+        elif self.base_type == 'Datetime':
+            try:
+                if isinstance(value, str):
+                    get_datetime(value)
+            except Exception:
+                errors.append(_("Value must be a valid datetime (YYYY-MM-DD HH:MM:SS)"))
+
+        elif self.base_type == 'JSON':
+            try:
+                if isinstance(value, str):
+                    json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                errors.append(_("Value must be valid JSON"))
 
         return {
             "valid": len(errors) == 0,
             "errors": errors
         }
 
+    def get_coerced_value(self, value: Any) -> Any:
+        """Coerce a value to the correct Python type for this attribute type.
+
+        Args:
+            value: The raw value to coerce
+
+        Returns:
+            The coerced value, or the original if coercion fails
+        """
+        if value is None or value == '':
+            return value
+
+        try:
+            if self.base_type == 'Integer':
+                return int(value)
+            elif self.base_type == 'Float':
+                return float(value)
+            elif self.base_type == 'Boolean':
+                return str(value).lower() in ('true', '1', 'yes')
+            elif self.base_type == 'Date':
+                return str(getdate(value)) if isinstance(value, str) else value
+            elif self.base_type == 'Datetime':
+                return str(get_datetime(value)) if isinstance(value, str) else value
+            elif self.base_type == 'JSON':
+                return json.loads(value) if isinstance(value, str) else value
+            else:
+                return str(value)
+        except (ValueError, TypeError, json.JSONDecodeError):
+            return value
+
 
 @frappe.whitelist()
-def get_attribute_types():
-    """Get all active attribute types"""
-    import frappe
+def get_attribute_types() -> List[Dict]:
+    """Get all active attribute types.
 
+    Returns:
+        List of attribute type dicts with core fields
+    """
     if not frappe.has_permission("PIM Attribute Type", "read"):
-        frappe.throw("Not permitted", frappe.PermissionError)
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
 
     return frappe.get_all("PIM Attribute Type",
         filters={"is_active": 1},
-        fields=["name", "type_name", "type_code", "base_type", "has_options", "supports_unit"],
+        fields=["name", "type_name", "type_code", "base_type",
+                "has_options", "supports_unit", "icon", "input_component"],
         order_by="type_name")
 
 
 @frappe.whitelist()
-def validate_value_for_type(attribute_type, value):
-    """Validate a value against an attribute type's constraints
+def validate_value_for_type(attribute_type: str, value: Any) -> Dict:
+    """Validate a value against an attribute type's constraints.
 
     Args:
         attribute_type: Name of the PIM Attribute Type
@@ -178,12 +249,25 @@ def validate_value_for_type(attribute_type, value):
     Returns:
         dict with 'valid' (bool) and 'errors' (list of error messages)
     """
+    if not frappe.db.exists("PIM Attribute Type", attribute_type):
+        frappe.throw(_("Attribute Type '{0}' not found").format(attribute_type))
+
     doc = frappe.get_doc("PIM Attribute Type", attribute_type)
     return doc.validate_value(value)
 
 
-def get_standard_attribute_types():
-    """Get the standard attribute types that should be installed by default
+@frappe.whitelist()
+def get_standard_types() -> List[Dict]:
+    """Get the list of standard attribute type definitions.
+
+    Returns:
+        List of dicts with standard attribute type definitions
+    """
+    return get_standard_attribute_types()
+
+
+def get_standard_attribute_types() -> List[Dict]:
+    """Get the 12 standard attribute types that should be installed by default.
 
     Returns:
         List of dicts with attribute type definitions
@@ -195,6 +279,7 @@ def get_standard_attribute_types():
             "base_type": "String",
             "is_standard": 1,
             "input_component": "text-input",
+            "display_component": "text-display",
             "icon": "fa fa-font"
         },
         {
@@ -203,7 +288,17 @@ def get_standard_attribute_types():
             "base_type": "String",
             "is_standard": 1,
             "input_component": "textarea",
+            "display_component": "text-display",
             "icon": "fa fa-align-left"
+        },
+        {
+            "type_name": "Rich Text",
+            "type_code": "rich_text",
+            "base_type": "String",
+            "is_standard": 1,
+            "input_component": "rich-text-editor",
+            "display_component": "html-display",
+            "icon": "fa fa-code"
         },
         {
             "type_name": "Number",
@@ -211,6 +306,7 @@ def get_standard_attribute_types():
             "base_type": "Float",
             "is_standard": 1,
             "input_component": "number-input",
+            "display_component": "number-display",
             "icon": "fa fa-hashtag"
         },
         {
@@ -219,6 +315,7 @@ def get_standard_attribute_types():
             "base_type": "Integer",
             "is_standard": 1,
             "input_component": "number-input",
+            "display_component": "number-display",
             "icon": "fa fa-hashtag"
         },
         {
@@ -228,6 +325,7 @@ def get_standard_attribute_types():
             "has_options": 1,
             "is_standard": 1,
             "input_component": "select",
+            "display_component": "badge-display",
             "icon": "fa fa-list"
         },
         {
@@ -237,6 +335,7 @@ def get_standard_attribute_types():
             "has_options": 1,
             "is_standard": 1,
             "input_component": "multiselect",
+            "display_component": "tags-display",
             "icon": "fa fa-list-ul"
         },
         {
@@ -247,6 +346,7 @@ def get_standard_attribute_types():
             "validation_regex": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$",
             "validation_message": "Color must be a valid hex code (e.g., #FF0000)",
             "input_component": "color-picker",
+            "display_component": "color-swatch",
             "icon": "fa fa-palette"
         },
         {
@@ -255,6 +355,7 @@ def get_standard_attribute_types():
             "base_type": "Boolean",
             "is_standard": 1,
             "input_component": "checkbox",
+            "display_component": "boolean-display",
             "icon": "fa fa-toggle-on"
         },
         {
@@ -263,6 +364,7 @@ def get_standard_attribute_types():
             "base_type": "Date",
             "is_standard": 1,
             "input_component": "date-picker",
+            "display_component": "date-display",
             "icon": "fa fa-calendar"
         },
         {
@@ -271,6 +373,7 @@ def get_standard_attribute_types():
             "base_type": "Datetime",
             "is_standard": 1,
             "input_component": "datetime-picker",
+            "display_component": "datetime-display",
             "icon": "fa fa-clock"
         },
         {
@@ -280,6 +383,20 @@ def get_standard_attribute_types():
             "supports_unit": 1,
             "is_standard": 1,
             "input_component": "measurement-input",
+            "display_component": "measurement-display",
             "icon": "fa fa-ruler"
         }
     ]
+
+
+def install_standard_types():
+    """Install all 12 standard attribute types if they don't exist.
+
+    Called during app setup / after_migrate hook.
+    """
+    for type_def in get_standard_attribute_types():
+        if not frappe.db.exists("PIM Attribute Type", type_def["type_code"]):
+            doc = frappe.new_doc("PIM Attribute Type")
+            doc.update(type_def)
+            doc.insert(ignore_permissions=True)
+            frappe.db.commit()

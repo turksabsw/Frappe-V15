@@ -4,7 +4,8 @@
   "module": "PIM",
   "istable": 1,
   "editable_grid": 1,
-  
+  "track_changes": 0,
+
   "fields": [
     {
       "fieldname": "attribute",
@@ -18,10 +19,11 @@
     {
       "fieldname": "is_required_in_family",
       "fieldtype": "Check",
-      "label": "Required in This Family",
+      "label": "Required",
       "default": 0,
       "in_list_view": 1,
-      "columns": 1
+      "columns": 1,
+      "description": "Must be filled for completeness"
     },
     {
       "fieldname": "default_value",
@@ -37,6 +39,22 @@
       "default": 0,
       "in_list_view": 1,
       "columns": 1
+    },
+    {
+      "fieldname": "inherited",
+      "fieldtype": "Check",
+      "label": "Inherited",
+      "default": 0,
+      "read_only": 1,
+      "description": "Inherited from parent family"
+    },
+    {
+      "fieldname": "inherited_from",
+      "fieldtype": "Link",
+      "label": "Inherited From",
+      "options": "Product Family",
+      "read_only": 1,
+      "depends_on": "inherited"
     }
   ]
 }
