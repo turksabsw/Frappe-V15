@@ -1,20 +1,31 @@
 """Template Engine Service
 
-Loads industry archetype JSON fixtures and applies them to create PIM
+Loads industry archetype templates and applies them to create PIM
 configuration entities (Product Types, Attribute Types, Attribute Groups,
 Attributes, Product Families, Categories). Entirely configuration-driven
 with no hardcoded sector logic.
 
+Supports two template sources:
+1. **JSON fixtures** — archetype template files in the ``fixtures/`` dir
+   (legacy, always available).
+2. **Industry Template DocType** — versioned sector templates stored in
+   the database with active-version management (preferred for production).
+
+The engine checks the DocType source first (if available) and falls back
+to fixture files, preserving full backward compatibility.
+
 Key Concepts:
 - Archetype Template: A JSON fixture describing a complete industry
   configuration (e.g., fashion, industrial, food).
+- Industry Template: A versioned DocType record for the same purpose,
+  with active-version selection per template_code.
 - Base Template: Common configuration shared across all archetypes.
 - Template Application: The process of reading a template and creating
   the corresponding DocType records idempotently.
 - Onboarding Integration: After successful application the onboarding
   state is updated via ``PIMOnboardingState.mark_template_applied()``.
 
-Template JSON Schema:
+Template JSON Schema (fixture format):
 {
     "archetype": "fashion",
     "version": "1.0",
@@ -56,6 +67,12 @@ class TemplateStatus(Enum):
     COMPLETED = "completed"
     PARTIAL = "partial"
     FAILED = "failed"
+
+
+class TemplateSource(Enum):
+    """Where a template was loaded from."""
+    FIXTURE = "fixture"
+    DOCTYPE = "doctype"
 
 
 class EntityType(Enum):
@@ -107,6 +124,22 @@ FIXTURES_DIR = os.path.join(
 
 # Base template filename
 BASE_TEMPLATE_FILENAME = "base_template.json"
+
+# Industry Template DocType name
+INDUSTRY_TEMPLATE_DOCTYPE = "Industry Template"
+
+# JSON data fields on the Industry Template DocType
+INDUSTRY_TEMPLATE_JSON_FIELDS = (
+    "attribute_groups",
+    "product_families",
+    "default_channels",
+    "coming_soon_channels",
+    "compliance_modules",
+    "scoring_weights",
+    "default_languages",
+    "category_tree",
+    "demo_products",
+)
 
 
 # =============================================================================
@@ -171,75 +204,80 @@ class TemplateEngine:
     # -----------------------------------------------------------------
 
     @staticmethod
-    def get_available_archetypes() -> List[Dict[str, Any]]:
-        """Return metadata for every archetype template found in the fixtures dir.
+    def get_available_archetypes(
+        include_fixtures: bool = True,
+        include_doctype: bool = True,
+    ) -> List[Dict[str, Any]]:
+        """Return metadata for all available archetype templates.
+
+        Merges templates from both fixture files and the Industry Template
+        DocType. When a template_code exists in both sources, the DocType
+        version takes precedence (source is marked accordingly).
+
+        Args:
+            include_fixtures: Include fixture-based templates.
+            include_doctype: Include Industry Template DocType records.
 
         Returns:
             List of dicts with ``archetype``, ``label``, ``description``,
-            ``version``, and ``file_path`` keys.
+            ``version``, ``source``, and optionally ``file_path`` keys.
         """
         archetypes: List[Dict[str, Any]] = []
+        seen_codes: set = set()
 
-        if not os.path.isdir(FIXTURES_DIR):
-            return archetypes
+        # 1. Industry Template DocType (preferred source)
+        if include_doctype:
+            for entry in TemplateEngine.get_available_industry_templates():
+                archetypes.append(entry)
+                seen_codes.add(entry["archetype"])
 
-        for filename in sorted(os.listdir(FIXTURES_DIR)):
-            if not filename.endswith("_template.json"):
-                continue
-            filepath = os.path.join(FIXTURES_DIR, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as fh:
-                    data = json.load(fh)
-
-                archetype_name = data.get("archetype")
-                if not archetype_name:
-                    continue
-
-                archetypes.append({
-                    "archetype": archetype_name,
-                    "label": data.get("label", archetype_name.replace("_", " ").title()),
-                    "description": data.get("description", ""),
-                    "version": data.get("version", "1.0"),
-                    "file_path": filepath,
-                })
-            except (json.JSONDecodeError, OSError):
-                continue
+        # 2. Fixture files (fallback for codes not in DocType)
+        if include_fixtures:
+            for entry in TemplateEngine._get_fixture_archetypes():
+                if entry["archetype"] not in seen_codes:
+                    archetypes.append(entry)
+                    seen_codes.add(entry["archetype"])
 
         return archetypes
 
     @staticmethod
     def load_template(archetype_name: str) -> Dict[str, Any]:
-        """Load a template JSON fixture by archetype name.
+        """Load a template by archetype name.
 
-        Scans the fixtures directory for a file whose ``archetype`` field
-        matches *archetype_name*.
+        Resolution order:
+        1. Try fixture file on disk (backward compatible).
+        2. Fall back to the active Industry Template DocType record.
 
         Args:
             archetype_name: Identifier such as ``"fashion"`` or ``"industrial"``.
 
         Returns:
-            Parsed JSON dict of the template.
+            Parsed template dict (fixture format).
 
         Raises:
-            FileNotFoundError: If no matching template file is found.
-            ValueError: If the file cannot be parsed as JSON.
+            FileNotFoundError: If no matching template is found in either source.
+            ValueError: If the fixture file cannot be parsed as JSON.
         """
+        # 1. Try fixture file first (backward compat)
         filepath = _resolve_template_path(archetype_name)
-        if not filepath:
+        if filepath:
+            try:
+                with open(filepath, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Template file for '{archetype_name}' is not valid JSON: {exc}"
+                ) from exc
+            return data
+
+        # 2. Fall back to Industry Template DocType
+        try:
+            return TemplateEngine.load_industry_template(archetype_name)
+        except FileNotFoundError:
             raise FileNotFoundError(
                 f"No template found for archetype '{archetype_name}' "
-                f"in {FIXTURES_DIR}"
+                f"in fixtures or Industry Template DocType"
             )
-
-        try:
-            with open(filepath, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except json.JSONDecodeError as exc:
-            raise ValueError(
-                f"Template file for '{archetype_name}' is not valid JSON: {exc}"
-            ) from exc
-
-        return data
 
     @staticmethod
     def validate_template(template_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -263,9 +301,9 @@ class TemplateEngine:
         errors: List[str] = []
         warnings: List[str] = []
 
-        # Top-level keys
-        if not template_data.get("archetype"):
-            errors.append("Missing required key: 'archetype'")
+        # Top-level keys — accept both fixture ("archetype") and DocType ("template_code")
+        if not template_data.get("archetype") and not template_data.get("template_code"):
+            errors.append("Missing required key: 'archetype' (or 'template_code')")
         if not template_data.get("version"):
             warnings.append("Missing 'version' key; defaulting to '1.0'")
 
@@ -450,7 +488,266 @@ class TemplateEngine:
         return preview
 
     # -----------------------------------------------------------------
-    # Internal helpers
+    # Industry Template DocType API
+    # -----------------------------------------------------------------
+
+    @staticmethod
+    def load_industry_template(
+        template_code: str,
+        version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Load template data from the Industry Template DocType.
+
+        Retrieves the active version by default, or a specific version
+        if *version* is provided.
+
+        Args:
+            template_code: Sector identifier (e.g., ``"fashion"``).
+            version: Specific version string (e.g., ``"1.0"``).
+                If *None*, the active version is loaded.
+
+        Returns:
+            Dict with the full template data from the DocType
+            (as returned by ``IndustryTemplate.get_template_data()``).
+
+        Raises:
+            FileNotFoundError: If the Industry Template DocType is
+                unavailable or no matching record exists.
+        """
+        import frappe
+
+        if not _industry_template_doctype_exists():
+            raise FileNotFoundError(
+                "Industry Template DocType is not available. "
+                "Use load_template() for fixture-based loading."
+            )
+
+        filters: Dict[str, Any] = {"template_code": template_code}
+        if version:
+            filters["version"] = version
+        else:
+            filters["is_active"] = 1
+
+        name = frappe.db.get_value(
+            INDUSTRY_TEMPLATE_DOCTYPE, filters, "name"
+        )
+
+        if not name:
+            version_info = f" version '{version}'" if version else " (active)"
+            raise FileNotFoundError(
+                f"No Industry Template found for code "
+                f"'{template_code}'{version_info}"
+            )
+
+        doc = frappe.get_doc(INDUSTRY_TEMPLATE_DOCTYPE, name)
+        return doc.get_template_data()
+
+    # Alias for verification compatibility
+    load_from_doctype = load_industry_template
+
+    @staticmethod
+    def get_available_industry_templates() -> List[Dict[str, Any]]:
+        """Return metadata for all active Industry Template DocType records.
+
+        Returns:
+            List of dicts with ``archetype``, ``label``, ``description``,
+            ``version``, and ``source`` keys. Returns an empty list if the
+            DocType is unavailable.
+        """
+        if not _industry_template_doctype_exists():
+            return []
+
+        import frappe
+
+        templates = frappe.get_all(
+            INDUSTRY_TEMPLATE_DOCTYPE,
+            filters={"is_active": 1},
+            fields=[
+                "name", "template_code", "display_name",
+                "description", "version",
+            ],
+            order_by="template_code asc",
+        )
+
+        return [
+            {
+                "archetype": t.template_code,
+                "label": t.display_name or t.template_code.replace("_", " ").title(),
+                "description": t.description or "",
+                "version": t.version or "1.0",
+                "source": TemplateSource.DOCTYPE.value,
+                "doctype_name": t.name,
+            }
+            for t in templates
+        ]
+
+    @staticmethod
+    def list_template_versions(template_code: str) -> List[Dict[str, Any]]:
+        """List all available versions of an industry template.
+
+        Args:
+            template_code: Sector identifier (e.g., ``"fashion"``).
+
+        Returns:
+            List of dicts with ``version``, ``is_active``, ``name``,
+            and ``modified`` keys, sorted by version descending.
+            Returns an empty list if the DocType is unavailable.
+        """
+        if not _industry_template_doctype_exists():
+            return []
+
+        import frappe
+
+        versions = frappe.get_all(
+            INDUSTRY_TEMPLATE_DOCTYPE,
+            filters={"template_code": template_code},
+            fields=["name", "version", "is_active", "modified"],
+            order_by="version desc",
+        )
+
+        return [
+            {
+                "name": v.name,
+                "version": v.version,
+                "is_active": bool(v.is_active),
+                "modified": str(v.modified) if v.modified else None,
+            }
+            for v in versions
+        ]
+
+    @staticmethod
+    def get_active_version(template_code: str) -> Optional[Dict[str, Any]]:
+        """Get the active version metadata for a template code.
+
+        Args:
+            template_code: Sector identifier (e.g., ``"fashion"``).
+
+        Returns:
+            Dict with ``name``, ``version``, ``is_active``, and
+            ``modified`` keys, or *None* if no active version exists.
+        """
+        if not _industry_template_doctype_exists():
+            return None
+
+        import frappe
+
+        name = frappe.db.get_value(
+            INDUSTRY_TEMPLATE_DOCTYPE,
+            {"template_code": template_code, "is_active": 1},
+            "name",
+        )
+
+        if not name:
+            return None
+
+        doc_data = frappe.db.get_value(
+            INDUSTRY_TEMPLATE_DOCTYPE,
+            name,
+            ["name", "version", "is_active", "modified"],
+            as_dict=True,
+        )
+
+        return {
+            "name": doc_data.name,
+            "version": doc_data.version,
+            "is_active": bool(doc_data.is_active),
+            "modified": str(doc_data.modified) if doc_data.modified else None,
+        }
+
+    @staticmethod
+    def preview_industry_template(
+        template_code: str,
+        version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Return a preview of an Industry Template DocType record.
+
+        Similar to :meth:`preview_template` but reads from the DocType
+        instead of a fixture file.
+
+        Args:
+            template_code: Sector identifier.
+            version: Optional specific version. Defaults to active.
+
+        Returns:
+            Dict with preview data from ``IndustryTemplate.get_preview_data()``.
+
+        Raises:
+            FileNotFoundError: If no matching template is found.
+        """
+        import frappe
+
+        if not _industry_template_doctype_exists():
+            raise FileNotFoundError(
+                "Industry Template DocType is not available."
+            )
+
+        filters: Dict[str, Any] = {"template_code": template_code}
+        if version:
+            filters["version"] = version
+        else:
+            filters["is_active"] = 1
+
+        name = frappe.db.get_value(
+            INDUSTRY_TEMPLATE_DOCTYPE, filters, "name"
+        )
+
+        if not name:
+            version_info = f" version '{version}'" if version else " (active)"
+            raise FileNotFoundError(
+                f"No Industry Template found for code "
+                f"'{template_code}'{version_info}"
+            )
+
+        doc = frappe.get_doc(INDUSTRY_TEMPLATE_DOCTYPE, name)
+        return doc.get_preview_data()
+
+    # -----------------------------------------------------------------
+    # Internal helpers (fixture loading)
+    # -----------------------------------------------------------------
+
+    @staticmethod
+    def _get_fixture_archetypes() -> List[Dict[str, Any]]:
+        """Return metadata for archetype templates found in the fixtures dir.
+
+        This is the original fixture-only logic, now extracted for reuse
+        by :meth:`get_available_archetypes`.
+
+        Returns:
+            List of dicts with ``archetype``, ``label``, ``description``,
+            ``version``, ``source``, and ``file_path`` keys.
+        """
+        archetypes: List[Dict[str, Any]] = []
+
+        if not os.path.isdir(FIXTURES_DIR):
+            return archetypes
+
+        for filename in sorted(os.listdir(FIXTURES_DIR)):
+            if not filename.endswith("_template.json"):
+                continue
+            filepath = os.path.join(FIXTURES_DIR, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+
+                archetype_name = data.get("archetype")
+                if not archetype_name:
+                    continue
+
+                archetypes.append({
+                    "archetype": archetype_name,
+                    "label": data.get("label", archetype_name.replace("_", " ").title()),
+                    "description": data.get("description", ""),
+                    "version": data.get("version", "1.0"),
+                    "source": TemplateSource.FIXTURE.value,
+                    "file_path": filepath,
+                })
+            except (json.JSONDecodeError, OSError):
+                continue
+
+        return archetypes
+
+    # -----------------------------------------------------------------
+    # Internal helpers (template application)
     # -----------------------------------------------------------------
 
     @staticmethod
@@ -490,6 +787,20 @@ class TemplateEngine:
 # =============================================================================
 # Private Module-Level Helpers
 # =============================================================================
+
+def _industry_template_doctype_exists() -> bool:
+    """Check whether the Industry Template DocType is available.
+
+    Uses a deferred import and caches the result for the duration of the
+    process.  Returns *False* if Frappe is not initialised or the DocType
+    has not been created yet.
+    """
+    try:
+        import frappe
+        return bool(frappe.db.exists("DocType", INDUSTRY_TEMPLATE_DOCTYPE))
+    except Exception:
+        return False
+
 
 def _resolve_template_path(archetype_name: str) -> Optional[str]:
     """Resolve the filesystem path for an archetype template.
@@ -805,3 +1116,34 @@ def get_available_archetypes() -> List[Dict[str, Any]]:
 def preview_template(archetype_name: str) -> Dict[str, Any]:
     """Convenience wrapper for :meth:`TemplateEngine.preview_template`."""
     return TemplateEngine.preview_template(archetype_name)
+
+
+def load_industry_template(
+    template_code: str,
+    version: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Convenience wrapper for :meth:`TemplateEngine.load_industry_template`."""
+    return TemplateEngine.load_industry_template(template_code, version)
+
+
+def get_available_industry_templates() -> List[Dict[str, Any]]:
+    """Convenience wrapper for :meth:`TemplateEngine.get_available_industry_templates`."""
+    return TemplateEngine.get_available_industry_templates()
+
+
+def list_template_versions(template_code: str) -> List[Dict[str, Any]]:
+    """Convenience wrapper for :meth:`TemplateEngine.list_template_versions`."""
+    return TemplateEngine.list_template_versions(template_code)
+
+
+def get_active_version(template_code: str) -> Optional[Dict[str, Any]]:
+    """Convenience wrapper for :meth:`TemplateEngine.get_active_version`."""
+    return TemplateEngine.get_active_version(template_code)
+
+
+def preview_industry_template(
+    template_code: str,
+    version: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Convenience wrapper for :meth:`TemplateEngine.preview_industry_template`."""
+    return TemplateEngine.preview_industry_template(template_code, version)

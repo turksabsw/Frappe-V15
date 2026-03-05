@@ -1,14 +1,16 @@
 <script setup lang="ts">
 /**
- * ComplianceStep - Configure regulatory compliance requirements.
+ * ComplianceStep - Configure regulatory compliance and certification tracking.
+ *
+ * Step 11 of 12 (optional / skippable).
  *
  * Collects:
- * - Required regulatory standards
- * - Certification requirements
- * - Safety warning preferences
+ * - compliance_standards: string[] — applicable regulatory standards
+ * - certification_tracking: boolean — enable certification management
  */
-import { reactive, watch } from 'vue'
-import type { ComplianceSetupData, StepFormData } from '@/types'
+import { reactive, watch, onMounted } from 'vue'
+import { useOnboardingStore } from '@/stores/onboarding'
+import type { ComplianceData, StepFormData } from '@/types'
 
 const props = defineProps<{
   data: Record<string, unknown>
@@ -21,75 +23,111 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-const REGULATORY_STANDARDS = [
-  { value: 'ce', label: 'CE Marking', description: 'European conformity for health, safety, and environment' },
-  { value: 'fda', label: 'FDA', description: 'US Food and Drug Administration regulations' },
-  { value: 'reach', label: 'REACH', description: 'EU regulation on chemicals and their safe use' },
-  { value: 'rohs', label: 'RoHS', description: 'Restriction of hazardous substances in electronics' },
-  { value: 'iso9001', label: 'ISO 9001', description: 'Quality management systems' },
-  { value: 'iso14001', label: 'ISO 14001', description: 'Environmental management systems' },
-  { value: 'gots', label: 'GOTS', description: 'Global Organic Textile Standard' },
-  { value: 'oeko_tex', label: 'OEKO-TEX', description: 'Textile product safety testing and certification' },
+const store = useOnboardingStore()
+
+// ============================================================================
+// Compliance Standard Definitions
+// ============================================================================
+
+interface ComplianceStandard {
+  value: string
+  label: string
+  description: string
+  category: 'safety' | 'environmental' | 'quality' | 'industry'
+}
+
+const COMPLIANCE_STANDARDS: readonly ComplianceStandard[] = [
+  // Safety standards
+  { value: 'ce', label: 'CE Marking', description: 'European conformity for health, safety, and environment', category: 'safety' },
+  { value: 'fda', label: 'FDA', description: 'US Food and Drug Administration regulations', category: 'safety' },
+  { value: 'rohs', label: 'RoHS', description: 'Restriction of hazardous substances in electronics', category: 'safety' },
+  // Environmental standards
+  { value: 'reach', label: 'REACH', description: 'EU regulation on chemicals and their safe use', category: 'environmental' },
+  { value: 'gots', label: 'GOTS', description: 'Global Organic Textile Standard', category: 'environmental' },
+  { value: 'oeko_tex', label: 'OEKO-TEX', description: 'Textile product safety testing and certification', category: 'environmental' },
+  // Quality management
+  { value: 'iso9001', label: 'ISO 9001', description: 'Quality management systems', category: 'quality' },
+  { value: 'iso14001', label: 'ISO 14001', description: 'Environmental management systems', category: 'quality' },
+  { value: 'iso22000', label: 'ISO 22000', description: 'Food safety management systems', category: 'quality' },
+  // Industry-specific
+  { value: 'iatf16949', label: 'IATF 16949', description: 'Automotive quality management systems', category: 'industry' },
+  { value: 'as9100', label: 'AS9100', description: 'Aerospace quality management systems', category: 'industry' },
+  { value: 'gmp', label: 'GMP', description: 'Good Manufacturing Practice for food, pharma, cosmetics', category: 'industry' },
 ] as const
 
-const CERTIFICATION_OPTIONS = [
-  { value: 'organic', label: 'Organic' },
-  { value: 'fair_trade', label: 'Fair Trade' },
-  { value: 'kosher', label: 'Kosher' },
-  { value: 'halal', label: 'Halal' },
-  { value: 'vegan', label: 'Vegan' },
-  { value: 'cruelty_free', label: 'Cruelty-Free' },
-  { value: 'recycled', label: 'Recycled Materials' },
-  { value: 'energy_star', label: 'Energy Star' },
-] as const
+/** Category labels for grouping standards in the UI */
+const CATEGORY_LABELS: Record<string, string> = {
+  safety: 'Safety & Regulatory',
+  environmental: 'Environmental',
+  quality: 'Quality Management',
+  industry: 'Industry-Specific',
+}
 
-const form = reactive<ComplianceSetupData>({
-  regulatory_standards: (props.data.regulatory_standards as string[]) ?? [],
-  certifications_required: (props.data.certifications_required as string[]) ?? [],
-  enable_safety_warnings: (props.data.enable_safety_warnings as boolean) ?? false,
-})
+/** Unique categories in display order */
+const CATEGORIES = ['safety', 'environmental', 'quality', 'industry'] as const
 
-/** Toggle a regulatory standard */
-function toggleStandard(standard: string): void {
-  if (!form.regulatory_standards) {
-    form.regulatory_standards = []
-  }
-  const idx = form.regulatory_standards.indexOf(standard)
-  if (idx >= 0) {
-    form.regulatory_standards.splice(idx, 1)
-  } else {
-    form.regulatory_standards.push(standard)
+// ============================================================================
+// Form State
+// ============================================================================
+
+/** Load initial data from store or props */
+function getInitialData(): ComplianceData {
+  const storeData = store.getWizardStepData('compliance')
+  const source = storeData ?? props.data
+
+  return {
+    compliance_standards: (source?.compliance_standards as string[])
+      ?? (source?.regulatory_standards as string[])
+      ?? [],
+    certification_tracking: (source?.certification_tracking as boolean) ?? false,
   }
 }
 
-/** Toggle a certification */
-function toggleCertification(cert: string): void {
-  if (!form.certifications_required) {
-    form.certifications_required = []
+const form = reactive<ComplianceData>(getInitialData())
+
+/** Sync initial data to store on mount */
+onMounted(() => {
+  store.setWizardStepData('compliance', { ...form })
+})
+
+// ============================================================================
+// Standard Toggle Helpers
+// ============================================================================
+
+/** Toggle a compliance standard on/off */
+function toggleStandard(standard: string): void {
+  if (!form.compliance_standards) {
+    form.compliance_standards = []
   }
-  const idx = form.certifications_required.indexOf(cert)
+  const idx = form.compliance_standards.indexOf(standard)
   if (idx >= 0) {
-    form.certifications_required.splice(idx, 1)
+    form.compliance_standards.splice(idx, 1)
   } else {
-    form.certifications_required.push(cert)
+    form.compliance_standards.push(standard)
   }
 }
 
 /** Check if a standard is selected */
 function isStandardSelected(standard: string): boolean {
-  return form.regulatory_standards?.includes(standard) ?? false
+  return form.compliance_standards?.includes(standard) ?? false
 }
 
-/** Check if a certification is selected */
-function isCertSelected(cert: string): boolean {
-  return form.certifications_required?.includes(cert) ?? false
+/** Get standards for a given category */
+function getStandardsByCategory(category: string): ComplianceStandard[] {
+  return COMPLIANCE_STANDARDS.filter((s) => s.category === category)
 }
 
-/** Emit form data changes */
+// ============================================================================
+// Watchers & Submit
+// ============================================================================
+
+/** Emit form data changes to parent and sync to store */
 watch(
   form,
   (newVal) => {
-    emit('update', { ...newVal })
+    const data = { ...newVal }
+    store.setWizardStepData('compliance', data)
+    emit('update', data)
   },
   { deep: true },
 )
@@ -101,18 +139,17 @@ function handleSubmit(): void {
 
 <template>
   <div class="space-y-6">
-    <!-- Regulatory Standards -->
-    <div>
-      <label class="mb-3 block text-sm font-medium text-pim-text">
-        Applicable Regulatory Standards
+    <!-- Compliance Standards by Category -->
+    <div
+      v-for="category in CATEGORIES"
+      :key="category"
+    >
+      <label class="mb-2 block text-sm font-medium text-pim-text">
+        {{ CATEGORY_LABELS[category] }}
       </label>
-      <p class="mb-3 text-xs text-pim-muted">
-        Select standards that apply to your products. This will add required compliance
-        fields and quality rules.
-      </p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button
-          v-for="standard in REGULATORY_STANDARDS"
+          v-for="standard in getStandardsByCategory(category)"
           :key="standard.value"
           class="flex items-start gap-3 rounded-lg border p-3 text-left transition-all duration-200"
           :class="
@@ -148,44 +185,22 @@ function handleSubmit(): void {
       </div>
     </div>
 
-    <!-- Certifications -->
-    <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
-        Product Certifications
-      </label>
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="cert in CERTIFICATION_OPTIONS"
-          :key="cert.value"
-          class="rounded-full border px-3 py-1.5 text-sm transition-all duration-200"
-          :class="
-            isCertSelected(cert.value)
-              ? 'border-primary-500 bg-primary-50 text-primary-700'
-              : 'border-pim-border text-pim-muted hover:border-gray-300'
-          "
-          @click="toggleCertification(cert.value)"
-        >
-          {{ cert.label }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Safety Warnings -->
+    <!-- Certification Tracking -->
     <div class="rounded-lg border border-pim-border p-4">
       <div class="flex items-start gap-3">
         <input
-          id="enable_safety_warnings"
-          v-model="form.enable_safety_warnings"
+          id="certification_tracking"
+          v-model="form.certification_tracking"
           type="checkbox"
           class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
         />
         <div class="flex-1">
-          <label class="block text-sm font-medium text-pim-text" for="enable_safety_warnings">
-            Enable Safety Warnings
+          <label class="block text-sm font-medium text-pim-text" for="certification_tracking">
+            Enable Certification Tracking
           </label>
           <p class="mt-0.5 text-xs text-pim-muted">
-            Require safety warning attributes for applicable products
-            (e.g., choking hazards, allergen information, chemical warnings).
+            Track certification status, expiration dates, and renewal reminders
+            for each product. Includes audit trail for compliance documentation.
           </p>
         </div>
       </div>
@@ -197,9 +212,9 @@ function handleSubmit(): void {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       <p class="text-xs text-amber-700">
-        Compliance requirements create mandatory quality rules. Products missing
-        required compliance data will have reduced quality scores. You can skip this
-        step if compliance is not relevant to your products.
+        This step is optional. Compliance standards create quality rules that enforce
+        required data on products. Products missing compliance data will have reduced
+        quality scores. You can skip this step and configure compliance later.
       </p>
     </div>
   </div>

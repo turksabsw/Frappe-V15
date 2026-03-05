@@ -55,6 +55,15 @@ app_license = "MIT"
 # automatically create page for each record of this doctype
 # website_generators = ["Web Page"]
 
+# Website Route Rules
+# -------------------
+# Proxy Vue.js frontend routes through Frappe's website system.
+# Maps /onboarding/* URLs to the Vue onboarding wizard SPA.
+
+website_route_rules = [
+    {"from_route": "/onboarding/<path:app_path>", "to_route": "onboarding"},
+]
+
 # Jinja
 # ----------
 
@@ -63,6 +72,13 @@ app_license = "MIT"
 #     "methods": "frappe_pim.utils.jinja_methods",
 #     "filters": "frappe_pim.utils.jinja_filters"
 # }
+
+# Boot Session
+# ------------
+# Inject PIM settings and onboarding status into every session boot.
+# Allows frontend to check onboarding completion without extra API calls.
+
+boot_session = "frappe_pim.pim.boot.boot_session"
 
 # Installation
 # ------------
@@ -177,7 +193,15 @@ fixtures = [
         "filters": [
             ["module", "=", "PIM"]
         ]
-    }
+    },
+    # Industry Template fixtures — export active sector templates
+    # (fashion, industrial, food, electronics, health_beauty, automotive, custom)
+    {
+        "dt": "Industry Template",
+        "filters": [
+            ["is_active", "=", 1]
+        ]
+    },
 ]
 
 # User Data Protection

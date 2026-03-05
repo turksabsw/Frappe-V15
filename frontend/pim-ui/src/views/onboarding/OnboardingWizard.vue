@@ -1,90 +1,203 @@
 <script setup lang="ts">
 /**
- * OnboardingWizard - Multi-step onboarding container with step navigation.
+ * OnboardingWizard - Multi-step onboarding container with split-panel layout.
  *
- * Orchestrates the SaaS onboarding flow:
- * - Loads and tracks onboarding state via the Pinia store
- * - Renders the active step component dynamically
- * - Manages step navigation (next, back, skip)
- * - Displays progress bar and step indicators
- * - Handles loading, error, and completion states
+ * Orchestrates the 12-step SaaS onboarding flow:
+ * - Fullscreen modal overlay via OnboardingModal wrapper
+ * - Split-panel layout: 55% form panel / 45% live preview panel
+ * - 12-step dynamic component routing with animated transitions
+ * - Real-time preview updates via useLivePreview composable
+ * - Form validation via useStepValidation composable
+ * - State management via useOnboardingWizard composable
+ * - Responsive: single panel on mobile with preview toggle
  */
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch, type Component } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { useOnboardingStore } from '@/stores/onboarding'
-import type { StepFormData, OnboardingStepName } from '@/types'
 
+// Composables
+import { useOnboardingWizard } from './composables/useOnboardingWizard'
+import { useStepValidation } from './composables/useStepValidation'
+import { useLivePreview } from './composables/useLivePreview'
+
+// Shared components
+import OnboardingModal from './OnboardingModal.vue'
+import WizardHeader from './components/WizardHeader.vue'
+import WizardFooter from './components/WizardFooter.vue'
+import LivePreviewPanel from './components/LivePreviewPanel.vue'
+import WizardStepTransition from './components/WizardStepTransition.vue'
+
+// Types
+import type {
+  WizardStepId,
+  StepFormData,
+  StepFormDataMap,
+  WizardDirection,
+} from '@/types'
+import { getStepId } from '@/types'
+
+// Step components (eager import for existing steps)
 import CompanyInfoStep from './steps/CompanyInfoStep.vue'
 import IndustryStep from './steps/IndustryStep.vue'
 import ProductStructureStep from './steps/ProductStructureStep.vue'
+import AttributeConfigStep from './steps/AttributeConfigStep.vue'
+import TaxonomyStep from './steps/TaxonomyStep.vue'
 import ChannelStep from './steps/ChannelStep.vue'
+import LocalizationStep from './steps/LocalizationStep.vue'
 import WorkflowStep from './steps/WorkflowStep.vue'
+import QualityScoringStep from './steps/QualityScoringStep.vue'
+import IntegrationsStep from './steps/IntegrationsStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
-import TemplateReviewStep from './steps/TemplateReviewStep.vue'
-import FirstDataStep from './steps/FirstDataStep.vue'
+import SummaryLaunchStep from './steps/SummaryLaunchStep.vue'
+
+// Preview components
+import CompanyCardPreview from './previews/CompanyCardPreview.vue'
+import IndustryProfilePreview from './previews/IndustryProfilePreview.vue'
+import ProductDiagramPreview from './previews/ProductDiagramPreview.vue'
+import AttributeTreePreview from './previews/AttributeTreePreview.vue'
+import CategoryTreePreview from './previews/CategoryTreePreview.vue'
+import ChannelDashPreview from './previews/ChannelDashPreview.vue'
+import LocaleGridPreview from './previews/LocaleGridPreview.vue'
+import WorkflowDiagramPreview from './previews/WorkflowDiagramPreview.vue'
+import QualityGaugePreview from './previews/QualityGaugePreview.vue'
+import IntegrationBoardPreview from './previews/IntegrationBoardPreview.vue'
+import ComplianceListPreview from './previews/ComplianceListPreview.vue'
+import FullSummaryPreview from './previews/FullSummaryPreview.vue'
+
+// ============================================================================
+// Setup
+// ============================================================================
 
 const router = useRouter()
-const { t } = useI18n()
-const store = useOnboardingStore()
+const wizard = useOnboardingWizard()
+const validation = useStepValidation()
+const livePreview = useLivePreview()
 
-/** Map backend step names to Vue components */
-const stepComponents: Partial<Record<OnboardingStepName, ReturnType<typeof defineComponent>>> = {
+// ============================================================================
+// 12-Step Component Registry
+// ============================================================================
+
+/**
+ * Map wizard step IDs to their Vue components.
+ *
+ * Existing steps are imported eagerly. Future steps (phase 6) will
+ * be added as they are implemented — unmapped steps show a placeholder.
+ */
+const stepComponents: Partial<Record<WizardStepId, Component>> = {
   company_info: CompanyInfoStep,
   industry_selection: IndustryStep,
   product_structure: ProductStructureStep,
+  attribute_config: AttributeConfigStep,
+  taxonomy: TaxonomyStep,
   channel_setup: ChannelStep,
+  localization: LocalizationStep,
   workflow_preferences: WorkflowStep,
-  compliance_setup: ComplianceStep,
-  template_applied: TemplateReviewStep,
-  customization_review: TemplateReviewStep,
-  first_data: FirstDataStep,
+  quality_scoring: QualityScoringStep,
+  integrations: IntegrationsStep,
+  compliance: ComplianceStep,
+  summary_launch: SummaryLaunchStep,
 }
 
-/** The currently active step component */
-const activeComponent = computed(() => {
-  const step = store.currentStep as OnboardingStepName
-  return stepComponents[step] ?? null
+// ============================================================================
+// 12-Step Preview Component Registry
+// ============================================================================
+
+/**
+ * Map wizard step IDs to their live preview Vue components.
+ * Each step gets a rich visual preview shown in the right panel.
+ */
+const previewComponents: Partial<Record<WizardStepId, Component>> = {
+  company_info: CompanyCardPreview,
+  industry_selection: IndustryProfilePreview,
+  product_structure: ProductDiagramPreview,
+  attribute_config: AttributeTreePreview,
+  taxonomy: CategoryTreePreview,
+  channel_setup: ChannelDashPreview,
+  localization: LocaleGridPreview,
+  workflow_preferences: WorkflowDiagramPreview,
+  quality_scoring: QualityGaugePreview,
+  integrations: IntegrationBoardPreview,
+  compliance: ComplianceListPreview,
+  summary_launch: FullSummaryPreview,
+}
+
+// ============================================================================
+// Navigation Direction
+// ============================================================================
+
+/** Direction of the current step transition (for slide animation) */
+const direction = ref<WizardDirection>('forward')
+
+/** Whether a retry operation is in progress */
+const retrying = ref(false)
+
+/** Last failed action callback for manual retry from error banner */
+const lastFailedAction = ref<(() => Promise<void>) | null>(null)
+
+/** Whether the current error can be retried */
+const canRetry = computed(() => !!lastFailedAction.value && !retrying.value)
+
+// ============================================================================
+// Computed
+// ============================================================================
+
+/** The currently active step component, or null for unmapped steps */
+const activeStepComponent = computed<Component | null>(() => {
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return null
+  return stepComponents[stepId] ?? null
 })
 
-/** Whether the current step is the template review / customization step */
-const isReviewMode = computed(() => {
-  return store.currentStep === 'customization_review'
+/** The currently active preview component for the right panel */
+const activePreviewComponent = computed<Component | null>(() => {
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return null
+  return previewComponents[stepId] ?? null
 })
 
-/** Display label for the current step */
-const currentStepLabel = computed(() => {
-  return store.activeWizardStep?.title ?? ''
+/** Current step ID as a string key for transition animations */
+const currentStepKey = computed(() => {
+  return wizard.currentStepId.value ?? 'loading'
 })
 
-/** Display description for the current step */
-const currentStepDescription = computed(() => {
-  return store.activeWizardStep?.description ?? ''
+/** Whether to show the wizard content (not completed/skipped) */
+const showWizard = computed(() => {
+  return (
+    !wizard.isCompleted.value &&
+    wizard.onboardingStatus.value !== 'skipped'
+  )
 })
 
-/** Whether we should show navigation buttons */
-const showNavigation = computed(() => {
-  return !store.isCompleted && !store.isSkipped && store.currentStep !== 'not_started'
+/** Current form data for the active step */
+const currentFormData = computed<StepFormData | null>(() => {
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return null
+  return wizard.getLocalFormData(stepId)
 })
 
-/** Whether the guided tour step is active (handled inline) */
-const isGuidedTour = computed(() => {
-  return store.currentStep === 'guided_tour'
+/** Preview panel title (step title or default) */
+const previewTitle = computed(() => {
+  return wizard.currentStepConfig.value?.title ?? 'Preview'
 })
 
-// =========================================================================
+// ============================================================================
 // Lifecycle
-// =========================================================================
+// ============================================================================
 
 onMounted(async () => {
-  if (!store.initialized) {
-    await store.startOnboarding()
+  await wizard.initialize()
+
+  // Initialize validation and preview for the current step
+  if (wizard.currentStepId.value) {
+    const stepId = wizard.currentStepId.value
+    const data = wizard.getLocalFormData(stepId)
+    validation.setActiveStep(stepId, data)
+    livePreview.updatePreview(stepId, data)
   }
 })
 
 // Redirect to dashboard when onboarding completes
 watch(
-  () => store.isCompleted,
+  () => wizard.isCompleted.value,
   (completed) => {
     if (completed) {
       router.push('/')
@@ -92,281 +205,339 @@ watch(
   },
 )
 
-// Redirect if skipped
+// Redirect when skipped
 watch(
-  () => store.isSkipped,
-  (skipped) => {
-    if (skipped) {
+  () => wizard.onboardingStatus.value,
+  (status) => {
+    if (status === 'skipped') {
       router.push('/')
     }
   },
 )
 
-// =========================================================================
+// Update validation and preview when the active step changes
+watch(
+  () => wizard.currentStepId.value,
+  (stepId) => {
+    if (stepId) {
+      const data = wizard.getLocalFormData(stepId)
+      validation.setActiveStep(stepId, data)
+      livePreview.updatePreview(stepId, data)
+    }
+  },
+)
+
+// ============================================================================
 // Event Handlers
-// =========================================================================
+// ============================================================================
 
 /**
- * Handle form data updates from step components (partial save).
+ * Handle form data updates from step components (real-time tracking).
+ * Updates local state, runs validation, and refreshes the live preview.
  */
 function handleStepUpdate(data: StepFormData): void {
-  const step = store.currentStep as OnboardingStepName
-  store.setLocalStepData(step, data)
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return
+
+  // Update local form data
+  wizard.setLocalFormData(stepId, data as StepFormDataMap[typeof stepId])
+
+  // Validate in real-time
+  validation.validateStep(stepId, data as StepFormDataMap[typeof stepId])
+
+  // Update live preview
+  livePreview.updatePreview(stepId, data as StepFormDataMap[typeof stepId])
 }
 
 /**
- * Handle step completion and advance to next step.
+ * Handle next step navigation from the footer button.
+ * Validates the current step before advancing.
  */
-async function handleNext(formData?: StepFormData): Promise<void> {
-  await store.nextStep(formData)
+async function handleNext(): Promise<void> {
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return
+
+  const formData = wizard.getLocalFormData(stepId)
+
+  // Validate before advancing
+  const result = validation.validateStep(stepId, formData)
+  if (!result.valid) return
+
+  direction.value = 'forward'
+
+  // Capture action for retry on network failure
+  const action = async () => {
+    await wizard.goToNext(formData ?? undefined)
+  }
+  lastFailedAction.value = action
+  await action()
+
+  // Clear retry action on success (no error = success)
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
+}
+
+/**
+ * Handle next step from step component emit.
+ * The step already validated internally when it emits @next.
+ */
+async function handleStepNext(formData?: StepFormData): Promise<void> {
+  direction.value = 'forward'
+
+  const action = async () => {
+    await wizard.goToNext(formData)
+  }
+  lastFailedAction.value = action
+  await action()
+
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
 }
 
 /**
  * Handle backward navigation.
  */
 async function handleBack(): Promise<void> {
-  await store.prevStep()
+  direction.value = 'backward'
+  await wizard.goToPrev()
+}
+
+/**
+ * Skip the current step (only for skippable steps 9-11).
+ */
+async function handleSkipStep(): Promise<void> {
+  direction.value = 'forward'
+
+  const action = async () => {
+    await wizard.skipCurrentStep()
+  }
+  lastFailedAction.value = action
+  await action()
+
+  if (!wizard.error.value) {
+    lastFailedAction.value = null
+  }
 }
 
 /**
  * Skip the entire onboarding wizard.
  */
-async function handleSkip(): Promise<void> {
-  await store.skipOnboarding()
+async function handleSkipAll(): Promise<void> {
+  await wizard.skipEntireOnboarding()
 }
 
 /**
- * Complete the guided tour and finish onboarding.
+ * Retry the last failed action after a network error.
+ * Re-invokes the stored action callback with the same parameters.
  */
-async function handleFinishTour(): Promise<void> {
-  await store.nextStep()
-}
+async function handleRetry(): Promise<void> {
+  const action = lastFailedAction.value
+  if (!action || retrying.value) return
 
-/**
- * Navigate to a specific completed step by clicking its indicator.
- */
-function handleStepClick(index: number): void {
-  const step = store.wizardSteps[index]
-  if (step && step.isCompleted && !step.isActive) {
-    // Navigate backward to a completed step
-    const targetStep = step.id as OnboardingStepName
-    store.setLocalStepData(targetStep, store.getLocalStepData(targetStep) ?? {})
+  retrying.value = true
+  try {
+    await action()
+    // Clear on success
+    if (!wizard.error.value) {
+      lastFailedAction.value = null
+    }
+  } catch {
+    // Action still failed — keep it available for another retry
+  } finally {
+    retrying.value = false
   }
+}
+
+/**
+ * Dismiss the current error and clear retry state.
+ */
+function dismissError(): void {
+  wizard.clearError()
+  lastFailedAction.value = null
+}
+
+/**
+ * Handle clicking a completed step indicator to jump back.
+ * Emitted by WizardHeader with the step number (1-based).
+ */
+function handleStepClick(stepNumber: number): void {
+  const targetId = getStepId(stepNumber)
+  if (!targetId) return
+
+  direction.value =
+    stepNumber < wizard.currentStepNumber.value ? 'backward' : 'forward'
+  wizard.goToStep(targetId)
 }
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-pim-bg p-4">
-    <div class="w-full max-w-3xl">
-      <!-- Header -->
-      <div class="mb-8 text-center">
-        <div
-          class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-xl font-bold text-white"
-        >
-          P
-        </div>
-        <h1 class="text-2xl font-bold text-pim-text">
-          {{ t('onboarding.welcome') }}
-        </h1>
-        <p class="mt-2 text-pim-muted">
-          Set up your product management workspace in a few steps.
-        </p>
-      </div>
+  <OnboardingModal :visible="true">
+    <!-- Loading State -->
+    <div
+      v-if="wizard.loading.value && !wizard.initialized.value"
+      class="flex h-full flex-col items-center justify-center"
+    >
+      <div
+        class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"
+      />
+      <p class="text-pim-muted">Loading your onboarding progress...</p>
+    </div>
 
-      <!-- Loading State -->
-      <div v-if="store.loading && !store.initialized" class="flex flex-col items-center py-12">
-        <div class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
-        <p class="text-pim-muted">Loading your onboarding progress...</p>
-      </div>
-
-      <!-- Main Wizard Content -->
-      <template v-else-if="!store.isCompleted && !store.isSkipped">
-        <!-- Progress Bar -->
-        <div class="mb-6">
-          <div class="mb-2 flex justify-between text-sm text-pim-muted">
-            <span>Step {{ store.currentStepIndex + 1 }} of {{ store.totalSteps }}</span>
-            <span>{{ Math.round(store.progressPercent) }}%</span>
-          </div>
-          <div class="h-2 w-full rounded-full bg-gray-200">
-            <div
-              class="h-2 rounded-full bg-primary-600 transition-all duration-500 ease-out"
-              :style="{ width: `${store.progressPercent}%` }"
+    <!-- Main Wizard Layout: Split-Panel -->
+    <template v-else-if="showWizard">
+      <div class="flex h-full w-full flex-col lg:flex-row">
+        <!-- ============================================================ -->
+        <!-- LEFT PANEL: Form (55% on desktop, full width on mobile)      -->
+        <!-- ============================================================ -->
+        <div class="flex w-full flex-col overflow-hidden lg:w-[55%]">
+          <!-- Wizard Header: Progress bar, step indicators, title -->
+          <div class="flex-shrink-0 border-b border-gray-200 px-6 py-4">
+            <WizardHeader
+              :current-step="wizard.currentStepNumber.value"
+              :total-steps="wizard.totalSteps.value"
+              :progress-percent="wizard.progressPercent.value"
+              :step-title="wizard.currentStepConfig.value?.title ?? ''"
+              :step-description="wizard.currentStepConfig.value?.description ?? ''"
+              :steps="wizard.wizardSteps.value"
+              @step-click="handleStepClick"
             />
           </div>
-        </div>
 
-        <!-- Step Indicators -->
-        <div class="mb-8 flex items-center justify-between">
-          <template v-for="(step, index) in store.wizardSteps" :key="step.id">
-            <button
-              class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium transition-all duration-200"
-              :class="{
-                'bg-primary-600 text-white shadow-md': step.isActive,
-                'bg-green-500 text-white cursor-pointer hover:bg-green-600': step.isCompleted && !step.isActive,
-                'bg-gray-200 text-pim-muted cursor-default': step.isFutureStep && !step.isCompleted,
-              }"
-              :disabled="step.isFutureStep && !step.isCompleted"
-              :title="step.title"
-              @click="handleStepClick(index)"
-            >
-              <svg
-                v-if="step.isCompleted && !step.isActive"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span v-else>{{ index + 1 }}</span>
-            </button>
-            <div
-              v-if="index < store.wizardSteps.length - 1"
-              class="mx-1 h-px flex-1 transition-colors duration-200"
-              :class="step.isCompleted ? 'bg-green-400' : 'bg-gray-200'"
-            />
-          </template>
-        </div>
-
-        <!-- Error Banner -->
-        <div
-          v-if="store.error"
-          class="mb-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
-        >
-          <svg class="h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p class="flex-1 text-sm text-red-700">{{ store.error }}</p>
-          <button
-            class="text-sm font-medium text-red-600 hover:text-red-800"
-            @click="store.clearError()"
+          <!-- Error Banner -->
+          <div
+            v-if="wizard.error.value"
+            class="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
           >
-            Dismiss
-          </button>
-        </div>
-
-        <!-- Step Content Card -->
-        <div class="card">
-          <!-- Step Header -->
-          <div class="mb-6">
-            <h2 class="text-xl font-semibold text-pim-text">{{ currentStepLabel }}</h2>
-            <p class="mt-1 text-sm text-pim-muted">{{ currentStepDescription }}</p>
-          </div>
-
-          <!-- Guided Tour (inline, no separate component) -->
-          <div v-if="isGuidedTour" class="space-y-6">
-            <div class="rounded-lg border border-primary-200 bg-primary-50 p-6">
-              <h3 class="mb-3 text-lg font-medium text-primary-900">Welcome to PIM!</h3>
-              <p class="mb-4 text-sm text-primary-700">
-                Your product management workspace is ready. Here are the key areas:
-              </p>
-              <ul class="space-y-3 text-sm text-primary-700">
-                <li class="flex items-start gap-2">
-                  <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span><strong>Dashboard</strong> - Overview of your products and completeness scores</span>
-                </li>
-                <li class="flex items-start gap-2">
-                  <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span><strong>Products</strong> - Create and manage product information</span>
-                </li>
-                <li class="flex items-start gap-2">
-                  <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span><strong>Settings</strong> - Manage product types, families, and attributes</span>
-                </li>
-              </ul>
+            <svg
+              class="h-5 w-5 flex-shrink-0 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p class="flex-1 text-sm text-red-700">{{ wizard.error.value }}</p>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="canRetry"
+                class="rounded-md bg-red-100 px-3 py-1 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
+                :disabled="retrying"
+                @click="handleRetry"
+              >
+                {{ retrying ? 'Retrying...' : 'Retry' }}
+              </button>
+              <button
+                class="text-sm font-medium text-red-600 hover:text-red-800"
+                @click="dismissError"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
 
-          <!-- Dynamic Step Component -->
+          <!-- Step Content (with slide transition) -->
+          <div class="flex-1 overflow-y-auto px-6 py-6">
+            <WizardStepTransition
+              :direction="direction"
+              :step-key="currentStepKey"
+            >
+              <!-- Dynamic Step Component -->
+              <component
+                v-if="activeStepComponent"
+                :is="activeStepComponent"
+                :data="currentFormData ?? {}"
+                :loading="wizard.loading.value"
+                @update="handleStepUpdate"
+                @next="handleStepNext"
+                @back="handleBack"
+              />
+
+              <!-- Placeholder for unmapped steps (future phase 6 components) -->
+              <div
+                v-else
+                class="flex flex-col items-center justify-center py-12 text-center"
+              >
+                <svg
+                  class="mb-3 h-10 w-10 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                <p class="text-sm font-medium text-pim-muted">
+                  {{ wizard.currentStepConfig.value?.title ?? 'Step' }} is being
+                  prepared...
+                </p>
+                <p class="mt-1 text-xs text-gray-400">
+                  This step will be available soon.
+                </p>
+              </div>
+            </WizardStepTransition>
+          </div>
+
+          <!-- Wizard Footer: Navigation buttons -->
+          <div class="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+            <WizardFooter
+              :is-first-step="wizard.isFirstStep.value"
+              :is-last-step="wizard.isLastStep.value"
+              :can-skip-step="wizard.canSkipCurrentStep.value"
+              :loading="wizard.loading.value"
+              :is-applying="wizard.isApplying.value"
+              :next-disabled="!validation.isValid.value"
+              @next="handleNext"
+              @back="handleBack"
+              @skip="handleSkipStep"
+              @skip-all="handleSkipAll"
+            />
+          </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- RIGHT PANEL: Live Preview (45% on desktop, mobile overlay)   -->
+        <!-- ============================================================ -->
+        <LivePreviewPanel
+          :step-title="previewTitle"
+          :has-preview="livePreview.hasPreview.value"
+          :loading="wizard.loading.value"
+        >
+          <!-- Step-specific rich preview component (Phase 7) -->
           <component
-            v-else-if="activeComponent"
-            :is="activeComponent"
-            :data="store.currentStepData ?? {}"
-            :review-mode="isReviewMode"
-            :loading="store.loading"
-            @update="handleStepUpdate"
-            @next="handleNext"
-            @back="handleBack"
+            v-if="activePreviewComponent && livePreview.previewData.value"
+            :is="activePreviewComponent"
+            :data="livePreview.previewData.value"
           />
-
-          <!-- Fallback for unmapped steps -->
-          <div v-else class="py-8 text-center text-pim-muted">
-            <p>Step content is being prepared...</p>
+          <!-- Fallback for steps without preview data -->
+          <div v-else-if="!livePreview.previewData.value" class="flex items-center justify-center py-8">
+            <p class="text-sm text-pim-muted">Configure this step to see a preview</p>
           </div>
-        </div>
+        </LivePreviewPanel>
+      </div>
+    </template>
 
-        <!-- Navigation Buttons -->
-        <div v-if="showNavigation" class="mt-6 flex items-center justify-between">
-          <div>
-            <button
-              v-if="!store.isFirstStep"
-              class="btn-secondary"
-              :disabled="store.loading"
-              @click="handleBack"
-            >
-              {{ t('onboarding.back') }}
-            </button>
-            <button
-              v-else
-              class="btn-ghost"
-              :disabled="store.loading"
-              @click="handleSkip"
-            >
-              {{ t('onboarding.skip') }}
-            </button>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <button
-              v-if="!store.isFirstStep"
-              class="btn-ghost text-sm"
-              :disabled="store.loading"
-              @click="handleSkip"
-            >
-              {{ t('onboarding.skip') }}
-            </button>
-
-            <button
-              v-if="isGuidedTour"
-              class="btn-primary"
-              :disabled="store.loading"
-              @click="handleFinishTour"
-            >
-              <span v-if="store.loading" class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              {{ t('onboarding.finish') }}
-            </button>
-            <button
-              v-else-if="!store.isLastStep"
-              class="btn-primary"
-              :disabled="store.loading"
-              @click="handleNext(store.currentStepData ?? undefined)"
-            >
-              <span v-if="store.loading" class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              {{ t('onboarding.next') }}
-            </button>
-            <button
-              v-else
-              class="btn-primary"
-              :disabled="store.loading"
-              @click="handleNext(store.currentStepData ?? undefined)"
-            >
-              <span v-if="store.loading" class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              {{ t('onboarding.finish') }}
-            </button>
-          </div>
-        </div>
-      </template>
+    <!-- Completion Redirect (transient state before redirect) -->
+    <div
+      v-else
+      class="flex h-full flex-col items-center justify-center"
+    >
+      <div
+        class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent"
+      />
+      <p class="text-pim-muted">Setting up your workspace...</p>
     </div>
-  </div>
+  </OnboardingModal>
 </template>

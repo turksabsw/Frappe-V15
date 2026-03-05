@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { onboardingGuard } from './guards/onboarding'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -34,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Settings' },
   },
   {
+    path: '/settings/onboarding-configuration',
+    name: 'onboarding-configuration',
+    component: () => import('@/views/settings/OnboardingConfiguration.vue'),
+    meta: { title: 'Onboarding Configuration' },
+  },
+  {
     path: '/list/:doctype',
     name: 'doctype-list',
     component: () => import('@/views/doctype/DocTypeList.vue'),
@@ -54,7 +61,12 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, _from, next) => {
+// Onboarding gate guard — blocks dashboard access until onboarding is complete.
+// Must run before the title guard since it may redirect.
+router.beforeEach(onboardingGuard)
+
+// Title guard — sets the document title based on route meta.
+router.beforeEach((to) => {
   let title = to.meta.title as string | undefined
 
   // Dynamic title for product detail
@@ -71,7 +83,6 @@ router.beforeEach((to, _from, next) => {
   }
 
   document.title = title ? `${title} - Frappe PIM` : 'Frappe PIM'
-  next()
 })
 
 export default router

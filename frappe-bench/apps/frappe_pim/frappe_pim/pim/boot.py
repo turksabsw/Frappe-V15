@@ -120,7 +120,12 @@ def boot_session(bootinfo):
             enabled_features.append("gs1")
         
         bootinfo["pim"]["enabled_features"] = enabled_features
-    
+
+        # Inject onboarding status for Vue frontend router guard.
+        # This avoids an extra API call on every page load to check
+        # whether the onboarding wizard should be shown.
+        bootinfo["pim"]["onboarding"] = _get_onboarding_status(frappe)
+
     except Exception as e:
         # Log error but don't break boot process
         frappe.log_error(
@@ -134,5 +139,50 @@ def boot_session(bootinfo):
                 "permissions": {},
                 "module_info": {},
                 "enabled_features": [],
+                "onboarding": _onboarding_defaults(),
             }
+
+
+def _onboarding_defaults():
+    """Return default onboarding status dict when data cannot be fetched."""
+    return {
+        "is_complete": False,
+        "current_step": 0,
+        "total_steps": 12,
+        "started_at": None,
+        "completed_at": None,
+    }
+
+
+def _get_onboarding_status(frappe):
+    """Read onboarding status from Tenant Config singleton.
+
+    Returns a lightweight dict consumed by the Vue Router guard to decide
+    whether to redirect the user into the onboarding wizard.
+
+    Args:
+        frappe: The frappe module (passed in to keep deferred import pattern).
+
+    Returns:
+        dict with keys: is_complete, current_step, total_steps,
+        started_at, completed_at.
+    """
+    defaults = _onboarding_defaults()
+
+    if not frappe.db.exists("DocType", "Tenant Config"):
+        return defaults
+
+    try:
+        tenant = frappe.get_cached_doc("Tenant Config")
+        onboarding_status = getattr(tenant, "onboarding_status", "")
+
+        return {
+            "is_complete": onboarding_status in ("completed", "skipped"),
+            "current_step": int(getattr(tenant, "onboarding_current_step", 0) or 0),
+            "total_steps": 12,
+            "started_at": str(getattr(tenant, "onboarding_started_at", "") or ""),
+            "completed_at": str(getattr(tenant, "onboarding_completed_at", "") or ""),
+        }
+    except Exception:
+        return defaults
 

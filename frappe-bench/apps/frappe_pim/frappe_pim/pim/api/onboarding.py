@@ -3,7 +3,7 @@
 This module provides API endpoints for the SaaS onboarding wizard.
 All functions support both synchronous use and whitelisted API access.
 
-Endpoints:
+Legacy Endpoints (backward compatible, use PIM Onboarding State only):
 - start_onboarding: Start/resume onboarding for the current user
 - get_onboarding_state: Get current onboarding state and progress
 - save_step_data: Save form data for a specific step (partial save)
@@ -13,6 +13,15 @@ Endpoints:
 - skip_onboarding: Skip the onboarding wizard entirely
 - reset_onboarding: Reset onboarding to initial state
 - preview_archetype: Preview what an archetype template will create
+
+New Endpoints (use Tenant Config + OnboardingService pattern):
+- get_onboarding_status: Get combined status from Tenant Config + state
+- save_step: Save step data with dual-write to Tenant Config
+- skip_step: Skip individual steps (9-11) after step 8
+- get_template_preview: Preview industry template from Industry Template DocType
+- apply_template: Apply template using Tenant Config sector selection
+- v2_complete_onboarding: Complete onboarding with Tenant Config update
+- update_post_onboarding: Edit configuration after onboarding completion
 
 Note: frappe imports are deferred to function level to allow module
 import without Frappe being available (e.g., for testing/verification).
@@ -525,6 +534,387 @@ def preview_archetype(archetype):
 
 
 # ============================================================================
+# New Endpoints (Tenant Config + OnboardingService pattern)
+# ============================================================================
+
+
+def get_onboarding_status():
+    """Get the combined onboarding status from Tenant Config and state.
+
+    Reads ``Tenant Config.onboarding_status`` for the gate check
+    (is the tenant onboarded?) and ``PIM Onboarding State`` for
+    step-level progress.
+
+    Returns:
+        dict: Combined onboarding status
+            - status: Onboarding status (not_started, in_progress, completed)
+            - current_step: Current step number (1-12)
+            - total_steps: Total number of steps (12)
+            - completed_steps: List of completed step IDs
+            - can_skip_remaining: Whether remaining steps can be skipped
+            - started_at: When onboarding began
+            - completed_at: When onboarding finished
+            - selected_industry: Chosen industry sector
+            - template_applied: Whether a template has been applied
+            - progress_percent: Completion percentage (0-100)
+            - steps: Per-step metadata list
+
+    Example:
+        >>> status = get_onboarding_status()
+        >>> if status['status'] == 'completed':
+        ...     print("Tenant is fully onboarded")
+        >>> else:
+        ...     print(f"Step {status['current_step']} of {status['total_steps']}")
+    """
+    import frappe
+    from frappe import _
+
+    if not frappe.has_permission("PIM Onboarding State", "read"):
+        frappe.throw(_("Not permitted to access onboarding status"), frappe.PermissionError)
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.get_status()
+
+
+def save_step(step_id, step_number, form_data, advance=False):
+    """Save form data for a specific onboarding step with dual-write.
+
+    Writes to both ``PIM Onboarding State`` (per-user progress) and
+    ``Tenant Config`` (per-site configuration). Creates an audit trail
+    entry in ``Onboarding Step Log``.
+
+    Args:
+        step_id: Step identifier (e.g., "company_info", "industry_selection",
+            "product_structure", "attribute_config", "taxonomy",
+            "channel_setup", "localization", "workflow_preferences",
+            "quality_scoring", "integrations", "compliance", "summary_launch")
+        step_number: Step number (1-12)
+        form_data: JSON string or dict of form data for the step
+        advance: If True, advance to the next step after saving
+
+    Returns:
+        dict: Save result
+            - success: Whether save succeeded
+            - step_id: The step that was saved
+            - step_number: The step number
+            - next_step: Next step number (if advance=True)
+            - validation_errors: List of validation error messages
+            - message: Status message
+
+    Example:
+        >>> result = save_step(
+        ...     step_id="company_info",
+        ...     step_number=1,
+        ...     form_data='{"company_name": "Acme Corp", "company_size": "51-200"}',
+        ...     advance=True
+        ... )
+        >>> if result['success']:
+        ...     print(f"Saved, next step: {result['next_step']}")
+    """
+    import frappe
+    from frappe import _
+    import json
+
+    if not frappe.has_permission("PIM Onboarding State", "write"):
+        frappe.throw(_("Not permitted to modify onboarding"), frappe.PermissionError)
+
+    # Parse form_data if it's a JSON string
+    if isinstance(form_data, str):
+        try:
+            parsed_data = json.loads(form_data)
+        except (json.JSONDecodeError, TypeError):
+            frappe.throw(
+                _("Invalid form_data: must be valid JSON"),
+                title=_("Invalid Data")
+            )
+    else:
+        parsed_data = form_data
+
+    if not isinstance(parsed_data, dict):
+        frappe.throw(
+            _("form_data must be a JSON object (dict)"),
+            title=_("Invalid Data")
+        )
+
+    # Coerce step_number to int (Frappe API may pass string)
+    try:
+        step_number = int(step_number)
+    except (TypeError, ValueError):
+        frappe.throw(
+            _("step_number must be an integer (1-12)"),
+            title=_("Invalid Data")
+        )
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.save_step(
+        step_id=step_id,
+        step_number=step_number,
+        form_data=parsed_data,
+        advance=bool(advance),
+    )
+
+
+def skip_step(step_id, step_number):
+    """Skip an individual onboarding step.
+
+    Only steps 9-11 (quality_scoring, integrations, compliance) are
+    skippable, and only after step 8 (workflow_preferences) has been
+    completed.
+
+    Args:
+        step_id: Step identifier to skip (e.g., "quality_scoring",
+            "integrations", "compliance")
+        step_number: Step number to skip (9, 10, or 11)
+
+    Returns:
+        dict: Skip result
+            - success: Whether skip succeeded
+            - step_id: The step that was skipped
+            - step_number: The step number
+            - next_step: Next step number after the skipped one
+            - validation_errors: List of validation error messages
+            - message: Status message
+
+    Example:
+        >>> result = skip_step(step_id="quality_scoring", step_number=9)
+        >>> if result['success']:
+        ...     print(f"Skipped, next step: {result['next_step']}")
+    """
+    import frappe
+    from frappe import _
+
+    if not frappe.has_permission("PIM Onboarding State", "write"):
+        frappe.throw(_("Not permitted to modify onboarding"), frappe.PermissionError)
+
+    # Coerce step_number to int
+    try:
+        step_number = int(step_number)
+    except (TypeError, ValueError):
+        frappe.throw(
+            _("step_number must be an integer"),
+            title=_("Invalid Data")
+        )
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.skip_step(
+        step_id=step_id,
+        step_number=step_number,
+    )
+
+
+def get_template_preview(industry=None):
+    """Preview what an industry template will create.
+
+    Returns a summary of all entities that would be created by the
+    selected industry template, including attribute groups, product
+    families, channels, compliance modules, and scoring weights.
+
+    Uses the ``Industry Template`` DocType instead of fixture JSON
+    files for versioned template data.
+
+    Args:
+        industry: Industry sector code (e.g., "fashion", "industrial",
+            "food", "electronics", "health_beauty", "automotive",
+            "custom"). If None, uses the industry selected in
+            Tenant Config.
+
+    Returns:
+        dict: Template preview information
+            - display_name: Human-readable industry name
+            - attribute_count: Total number of attributes
+            - attribute_groups: List of attribute group names
+            - product_families: List of product family definitions
+            - default_channels: List of default channel identifiers
+            - coming_soon_channels: List of upcoming channels
+            - compliance_modules: List of compliance module names
+            - quality_threshold: Default quality threshold
+            - scoring_weights: Quality scoring weight breakdown
+            - default_languages: List of default language codes
+            - estimated_setup_minutes: Estimated setup time
+            - demo_products: Number of demo products available
+
+    Example:
+        >>> preview = get_template_preview("fashion")
+        >>> print(f"Will create {preview['attribute_count']} attributes")
+        >>> print(f"Groups: {', '.join(preview['attribute_groups'])}")
+    """
+    import frappe
+    from frappe import _
+
+    if not frappe.has_permission("PIM Onboarding State", "read"):
+        frappe.throw(_("Not permitted to preview templates"), frappe.PermissionError)
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.get_template_preview(industry=industry)
+
+
+def apply_template(create_demo_products=False):
+    """Apply the industry template based on Tenant Config selection.
+
+    Reads the selected industry from ``Tenant Config.selected_industry``
+    and applies the corresponding industry template. Optionally creates
+    demo products for the tenant.
+
+    Args:
+        create_demo_products: If True, also create demo products from the
+            template. Defaults to False.
+
+    Returns:
+        dict: Template application result
+            - success: Whether application succeeded
+            - status: Application status (completed, partial, failed)
+            - entities_created: Dict of entity type counts
+            - demo_products_created: Number of demo products created
+            - onboarding_completed_at: Completion timestamp
+            - redirect_to: Post-completion redirect URL
+            - errors: List of error messages
+            - messages: List of informational messages
+
+    Example:
+        >>> result = apply_template(create_demo_products=True)
+        >>> if result['success']:
+        ...     print(f"Created {result['entities_created']} entities")
+    """
+    import frappe
+    from frappe import _
+
+    if not frappe.has_permission("PIM Onboarding State", "write"):
+        frappe.throw(_("Not permitted to apply templates"), frappe.PermissionError)
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.apply_template(
+        create_demo_products=bool(create_demo_products),
+    )
+
+
+def v2_complete_onboarding(form_data=None):
+    """Complete the onboarding wizard with Tenant Config update.
+
+    Aggregates all step data, applies the selected industry template,
+    updates feature flags, and marks both ``PIM Onboarding State`` and
+    ``Tenant Config`` as completed. This is the new version that
+    coordinates with the Tenant Config singleton.
+
+    Args:
+        form_data: Optional JSON string or dict of final form data from
+            the summary/launch step.
+
+    Returns:
+        dict: Completion result
+            - success: Whether completion succeeded
+            - status: Final status (completed, failed)
+            - entities_created: Dict of entity type counts
+            - demo_products_created: Number of demo products created
+            - onboarding_completed_at: Completion timestamp
+            - redirect_to: Post-completion redirect URL
+            - errors: List of error messages
+            - messages: List of informational messages
+
+    Example:
+        >>> result = v2_complete_onboarding(
+        ...     form_data='{"confirm_launch": true}'
+        ... )
+        >>> if result['success']:
+        ...     print(f"Onboarding complete! Go to {result['redirect_to']}")
+    """
+    import frappe
+    from frappe import _
+    import json
+
+    if not frappe.has_permission("PIM Onboarding State", "write"):
+        frappe.throw(_("Not permitted to complete onboarding"), frappe.PermissionError)
+
+    # Parse form_data if it's a JSON string
+    parsed_data = None
+    if form_data:
+        if isinstance(form_data, str):
+            try:
+                parsed_data = json.loads(form_data)
+            except (json.JSONDecodeError, TypeError):
+                frappe.throw(
+                    _("Invalid form_data: must be valid JSON"),
+                    title=_("Invalid Data")
+                )
+        else:
+            parsed_data = form_data
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.complete_onboarding(form_data=parsed_data)
+
+
+def update_post_onboarding(section, form_data):
+    """Update tenant configuration after onboarding completion.
+
+    Allows editing of onboarding-configured sections in
+    ``Tenant Config`` after the wizard has been completed.
+    Used by the post-onboarding Settings > Onboarding Configuration
+    editor.
+
+    If ``section`` is "industry" and the value changes, returns an
+    ``impact_warning`` with affected entity counts.
+
+    Args:
+        section: Configuration section to update. Valid sections:
+            "company_info", "industry", "product_structure", "attributes",
+            "taxonomy", "channels", "localization", "workflow", "quality",
+            "integrations", "compliance"
+        form_data: JSON string or dict of field values to update
+
+    Returns:
+        dict: Update result
+            - success: Whether update succeeded
+            - updated_fields: List of field names that were updated
+            - impact_warning: Impact analysis if industry changed (or None)
+            - message: Status message
+
+    Example:
+        >>> result = update_post_onboarding(
+        ...     section="company_info",
+        ...     form_data='{"company_name": "New Corp Name"}'
+        ... )
+        >>> if result['success']:
+        ...     print(f"Updated: {result['updated_fields']}")
+    """
+    import frappe
+    from frappe import _
+    import json
+
+    if not frappe.has_permission("PIM Onboarding State", "write"):
+        frappe.throw(_("Not permitted to update onboarding configuration"), frappe.PermissionError)
+
+    # Parse form_data if it's a JSON string
+    if isinstance(form_data, str):
+        try:
+            parsed_data = json.loads(form_data)
+        except (json.JSONDecodeError, TypeError):
+            frappe.throw(
+                _("Invalid form_data: must be valid JSON"),
+                title=_("Invalid Data")
+            )
+    else:
+        parsed_data = form_data
+
+    if not isinstance(parsed_data, dict):
+        frappe.throw(
+            _("form_data must be a JSON object (dict)"),
+            title=_("Invalid Data")
+        )
+
+    from frappe_pim.pim.services.onboarding_service import OnboardingService
+
+    return OnboardingService.update_post_onboarding(
+        section=section,
+        form_data=parsed_data,
+    )
+
+
+# ============================================================================
 # Whitelist Wrapper
 # ============================================================================
 
@@ -532,6 +922,7 @@ def _wrap_for_whitelist():
     """Add @frappe.whitelist() decorators at runtime."""
     import frappe
 
+    # Legacy endpoints (backward compatible)
     global start_onboarding, get_onboarding_state, save_step_data
     global apply_archetype_template, complete_onboarding, get_available_archetypes
     global skip_onboarding, reset_onboarding, preview_archetype
@@ -545,6 +936,19 @@ def _wrap_for_whitelist():
     skip_onboarding = frappe.whitelist()(skip_onboarding)
     reset_onboarding = frappe.whitelist()(reset_onboarding)
     preview_archetype = frappe.whitelist()(preview_archetype)
+
+    # New endpoints (Tenant Config + OnboardingService pattern)
+    global get_onboarding_status, save_step, skip_step
+    global get_template_preview, apply_template
+    global v2_complete_onboarding, update_post_onboarding
+
+    get_onboarding_status = frappe.whitelist()(get_onboarding_status)
+    save_step = frappe.whitelist()(save_step)
+    skip_step = frappe.whitelist()(skip_step)
+    get_template_preview = frappe.whitelist()(get_template_preview)
+    apply_template = frappe.whitelist()(apply_template)
+    v2_complete_onboarding = frappe.whitelist()(v2_complete_onboarding)
+    update_post_onboarding = frappe.whitelist()(update_post_onboarding)
 
 
 # Apply whitelist decorators if frappe is available

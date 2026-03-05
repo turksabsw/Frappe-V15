@@ -3,12 +3,18 @@
  * ChannelStep - Configure sales and distribution channels.
  *
  * Collects:
- * - Active channels (e-commerce, marketplace, retail, wholesale, etc.)
+ * - Active channels with implemented vs coming-soon distinction
  * - Primary channel selection
+ * - Business model (B2C, B2B, B2B2C, marketplace, omnichannel)
  * - Marketplace integrations
+ *
+ * Channels are split into two groups:
+ * - Implemented: Shopify, Amazon, Trendyol (fully supported)
+ * - Coming Soon: HB, N11, Etsy, WooCommerce, Google Merchant
  */
-import { reactive, computed, watch } from 'vue'
-import type { ChannelSetupData, StepFormData } from '@/types'
+import { reactive, computed, watch, onMounted } from 'vue'
+import { useOnboardingStore } from '@/stores/onboarding'
+import type { ChannelSetupData, StepFormData, BusinessModel } from '@/types'
 
 const props = defineProps<{
   data: Record<string, unknown>
@@ -21,88 +27,131 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-const AVAILABLE_CHANNELS = [
-  { value: 'ecommerce', label: 'E-Commerce', description: 'Online store (Shopify, WooCommerce, etc.)' },
-  { value: 'marketplace', label: 'Marketplace', description: 'Amazon, eBay, Etsy, etc.' },
-  { value: 'retail', label: 'Retail / POS', description: 'Physical stores and point-of-sale' },
-  { value: 'wholesale', label: 'Wholesale / B2B', description: 'Bulk sales to business customers' },
-  { value: 'distributor', label: 'Distributor', description: 'Third-party distribution network' },
-  { value: 'direct', label: 'Direct Sales', description: 'Sales team and direct outreach' },
+const store = useOnboardingStore()
+
+// ============================================================================
+// Channel Definitions
+// ============================================================================
+
+interface ChannelOption {
+  value: string
+  label: string
+  description: string
+  status: 'implemented' | 'coming_soon'
+}
+
+const AVAILABLE_CHANNELS: readonly ChannelOption[] = [
+  // Implemented channels
+  { value: 'shopify', label: 'Shopify', description: 'Full e-commerce storefront integration', status: 'implemented' },
+  { value: 'amazon', label: 'Amazon', description: 'Amazon marketplace seller integration', status: 'implemented' },
+  { value: 'trendyol', label: 'Trendyol', description: 'Trendyol marketplace integration', status: 'implemented' },
+  { value: 'own_website', label: 'Own Website', description: 'Your own e-commerce website', status: 'implemented' },
+  { value: 'retail', label: 'Retail / POS', description: 'Physical stores and point-of-sale', status: 'implemented' },
+  { value: 'wholesale', label: 'Wholesale / B2B', description: 'Bulk sales to business customers', status: 'implemented' },
+  // Coming soon channels
+  { value: 'hepsiburada', label: 'Hepsiburada', description: 'Hepsiburada marketplace (coming soon)', status: 'coming_soon' },
+  { value: 'n11', label: 'N11', description: 'N11 marketplace (coming soon)', status: 'coming_soon' },
+  { value: 'etsy', label: 'Etsy', description: 'Etsy handmade marketplace (coming soon)', status: 'coming_soon' },
+  { value: 'woocommerce', label: 'WooCommerce', description: 'WordPress e-commerce plugin (coming soon)', status: 'coming_soon' },
+  { value: 'google_merchant', label: 'Google Merchant', description: 'Google Shopping product feed (coming soon)', status: 'coming_soon' },
 ] as const
 
-const MARKETPLACE_OPTIONS = [
-  { value: 'amazon', label: 'Amazon' },
-  { value: 'ebay', label: 'eBay' },
-  { value: 'etsy', label: 'Etsy' },
-  { value: 'shopify', label: 'Shopify' },
-  { value: 'woocommerce', label: 'WooCommerce' },
-  { value: 'magento', label: 'Magento' },
+const IMPLEMENTED_CHANNELS = AVAILABLE_CHANNELS.filter((c) => c.status === 'implemented')
+const COMING_SOON_CHANNELS = AVAILABLE_CHANNELS.filter((c) => c.status === 'coming_soon')
+
+// ============================================================================
+// Business Model Options
+// ============================================================================
+
+const BUSINESS_MODELS: readonly { value: BusinessModel; label: string; description: string }[] = [
+  { value: 'b2c', label: 'B2C', description: 'Direct to consumer sales' },
+  { value: 'b2b', label: 'B2B', description: 'Business to business sales' },
+  { value: 'b2b2c', label: 'B2B2C', description: 'Sell through business partners to consumers' },
+  { value: 'marketplace', label: 'Marketplace', description: 'Multi-seller marketplace platform' },
+  { value: 'omnichannel', label: 'Omnichannel', description: 'Unified experience across all channels' },
 ] as const
 
-const form = reactive<ChannelSetupData>({
-  channels: (props.data.channels as string[]) ?? [],
-  primary_channel: (props.data.primary_channel as string) ?? '',
-  marketplace_integrations: (props.data.marketplace_integrations as string[]) ?? [],
-})
+// ============================================================================
+// Form State
+// ============================================================================
 
-/** Whether the marketplace channel is selected */
-const hasMarketplace = computed(() => {
-  return form.channels?.includes('marketplace') ?? false
-})
+/** Load initial data from store or props */
+function getInitialData(): ChannelSetupData {
+  const storeData = store.getWizardStepData('channel_setup')
+  const source = storeData ?? props.data
 
-/** Toggle a channel on/off */
-function toggleChannel(channel: string): void {
-  if (!form.channels) {
-    form.channels = []
-  }
-  const idx = form.channels.indexOf(channel)
-  if (idx >= 0) {
-    form.channels.splice(idx, 1)
-    // Clear primary if removed
-    if (form.primary_channel === channel) {
-      form.primary_channel = form.channels[0] ?? ''
-    }
-    // Clear marketplace integrations if marketplace removed
-    if (channel === 'marketplace') {
-      form.marketplace_integrations = []
-    }
-  } else {
-    form.channels.push(channel)
-    // Set as primary if first channel
-    if (form.channels.length === 1) {
-      form.primary_channel = channel
-    }
+  return {
+    selected_channels: (source?.selected_channels as string[]) ?? (source?.channels as string[]) ?? [],
+    primary_channel: (source?.primary_channel as string) ?? '',
+    business_model: (source?.business_model as BusinessModel) ?? undefined,
+    marketplace_integrations: (source?.marketplace_integrations as string[]) ?? [],
   }
 }
 
-/** Toggle a marketplace integration */
-function toggleMarketplace(marketplace: string): void {
-  if (!form.marketplace_integrations) {
-    form.marketplace_integrations = []
+const form = reactive<ChannelSetupData>(getInitialData())
+
+/** Sync initial data to store on mount */
+onMounted(() => {
+  store.setWizardStepData('channel_setup', { ...form })
+})
+
+// ============================================================================
+// Computed
+// ============================================================================
+
+/** Whether any implemented channels are selected */
+const hasSelectedChannels = computed(() => {
+  return (form.selected_channels?.length ?? 0) > 0
+})
+
+/** Implemented channels that are selected (for primary channel dropdown) */
+const selectedImplementedChannels = computed(() => {
+  return IMPLEMENTED_CHANNELS.filter((c) => isChannelSelected(c.value))
+})
+
+// ============================================================================
+// Channel Toggle
+// ============================================================================
+
+/** Toggle a channel on/off (only implemented channels can be toggled) */
+function toggleChannel(channel: ChannelOption): void {
+  if (channel.status === 'coming_soon') return
+
+  if (!form.selected_channels) {
+    form.selected_channels = []
   }
-  const idx = form.marketplace_integrations.indexOf(marketplace)
+  const idx = form.selected_channels.indexOf(channel.value)
   if (idx >= 0) {
-    form.marketplace_integrations.splice(idx, 1)
+    form.selected_channels.splice(idx, 1)
+    // Clear primary if removed
+    if (form.primary_channel === channel.value) {
+      form.primary_channel = form.selected_channels[0] ?? ''
+    }
   } else {
-    form.marketplace_integrations.push(marketplace)
+    form.selected_channels.push(channel.value)
+    // Set as primary if first channel
+    if (form.selected_channels.length === 1) {
+      form.primary_channel = channel.value
+    }
   }
 }
 
 /** Check if a channel is selected */
 function isChannelSelected(channel: string): boolean {
-  return form.channels?.includes(channel) ?? false
+  return form.selected_channels?.includes(channel) ?? false
 }
 
-/** Check if a marketplace is selected */
-function isMarketplaceSelected(marketplace: string): boolean {
-  return form.marketplace_integrations?.includes(marketplace) ?? false
-}
+// ============================================================================
+// Watchers & Submit
+// ============================================================================
 
-/** Emit form data changes */
+/** Emit form data changes to parent and sync to store */
 watch(
   form,
   (newVal) => {
-    emit('update', { ...newVal })
+    const data = { ...newVal }
+    store.setWizardStepData('channel_setup', data)
+    emit('update', data)
   },
   { deep: true },
 )
@@ -114,14 +163,17 @@ function handleSubmit(): void {
 
 <template>
   <div class="space-y-6">
-    <!-- Channel Selection -->
+    <!-- Implemented Channels -->
     <div>
       <label class="mb-3 block text-sm font-medium text-pim-text">
-        Which sales channels do you use?
+        Active Sales Channels
       </label>
+      <p class="mb-2 text-xs text-pim-muted">
+        Select the channels you currently sell through.
+      </p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <button
-          v-for="channel in AVAILABLE_CHANNELS"
+          v-for="channel in IMPLEMENTED_CHANNELS"
           :key="channel.value"
           class="flex items-start gap-3 rounded-lg border p-3 text-left transition-all duration-200"
           :class="
@@ -129,7 +181,7 @@ function handleSubmit(): void {
               ? 'border-primary-500 bg-primary-50'
               : 'border-pim-border hover:border-gray-300'
           "
-          @click="toggleChannel(channel.value)"
+          @click="toggleChannel(channel)"
         >
           <div
             class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
@@ -157,8 +209,42 @@ function handleSubmit(): void {
       </div>
     </div>
 
+    <!-- Coming Soon Channels -->
+    <div>
+      <label class="mb-3 block text-sm font-medium text-pim-text">
+        Coming Soon
+      </label>
+      <p class="mb-2 text-xs text-pim-muted">
+        These integrations are under development and will be available soon.
+      </p>
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="channel in COMING_SOON_CHANNELS"
+          :key="channel.value"
+          class="flex items-start gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 opacity-60"
+        >
+          <div
+            class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-gray-300"
+          >
+            <svg
+              class="h-3 w-3 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500">{{ channel.label }}</p>
+            <p class="text-xs text-gray-400">{{ channel.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Primary Channel -->
-    <div v-if="form.channels && form.channels.length > 1">
+    <div v-if="selectedImplementedChannels.length > 1">
       <label class="mb-1.5 block text-sm font-medium text-pim-text" for="primary_channel">
         Primary Channel
       </label>
@@ -168,7 +254,7 @@ function handleSubmit(): void {
         class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       >
         <option
-          v-for="channel in AVAILABLE_CHANNELS.filter((c) => isChannelSelected(c.value))"
+          v-for="channel in selectedImplementedChannels"
           :key="channel.value"
           :value="channel.value"
         >
@@ -180,24 +266,25 @@ function handleSubmit(): void {
       </p>
     </div>
 
-    <!-- Marketplace Integrations -->
-    <div v-if="hasMarketplace">
+    <!-- Business Model -->
+    <div>
       <label class="mb-2 block text-sm font-medium text-pim-text">
-        Marketplace Integrations
+        Business Model
       </label>
-      <div class="flex flex-wrap gap-2">
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <button
-          v-for="mp in MARKETPLACE_OPTIONS"
-          :key="mp.value"
-          class="rounded-full border px-3 py-1.5 text-sm transition-all duration-200"
+          v-for="model in BUSINESS_MODELS"
+          :key="model.value"
+          class="rounded-lg border p-3 text-left transition-all duration-200"
           :class="
-            isMarketplaceSelected(mp.value)
-              ? 'border-primary-500 bg-primary-50 text-primary-700'
-              : 'border-pim-border text-pim-muted hover:border-gray-300'
+            form.business_model === model.value
+              ? 'border-primary-500 bg-primary-50'
+              : 'border-pim-border hover:border-gray-300'
           "
-          @click="toggleMarketplace(mp.value)"
+          @click="form.business_model = model.value"
         >
-          {{ mp.label }}
+          <p class="text-sm font-medium text-pim-text">{{ model.label }}</p>
+          <p class="text-xs text-pim-muted">{{ model.description }}</p>
         </button>
       </div>
     </div>
