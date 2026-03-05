@@ -175,7 +175,6 @@ class TestOnboardingStepLog(FrappeTestCase):
             step_id="company_info",
             step_number=1,
             action="completed",
-            user="step_log_test_api@example.com",
         )
 
         self.assertIsInstance(result, dict)
@@ -183,7 +182,7 @@ class TestOnboardingStepLog(FrappeTestCase):
         self.assertEqual(result["step_id"], "company_info")
         self.assertEqual(result["step_number"], 1)
         self.assertEqual(result["action"], "completed")
-        self.assertEqual(result["user"], "step_log_test_api@example.com")
+        self.assertEqual(result["user"], frappe.session.user)
 
     def test_11_create_step_log_api_with_form_data(self):
         """Test create_step_log API with form data."""
@@ -199,7 +198,6 @@ class TestOnboardingStepLog(FrappeTestCase):
             step_number=2,
             action="completed",
             form_data=form_data,
-            user="step_log_test_api2@example.com",
         )
 
         self.assertIsNotNone(result["name"])
@@ -222,7 +220,6 @@ class TestOnboardingStepLog(FrappeTestCase):
             action="completed",
             started_at=started,
             time_spent_seconds=120,
-            user="step_log_test_api3@example.com",
         )
 
         self.assertEqual(result["time_spent_seconds"], 120)
@@ -236,7 +233,6 @@ class TestOnboardingStepLog(FrappeTestCase):
             step_id="workflow_preferences",
             step_number=5,
             action="completed",
-            user="step_log_test_api4@example.com",
         )
 
         self.assertIsNotNone(result["completed_at"])
@@ -250,11 +246,10 @@ class TestOnboardingStepLog(FrappeTestCase):
         ])
 
         result = create_step_log(
-            step_id="compliance_setup",
-            step_number=6,
+            step_id="compliance",
+            step_number=11,
             action="saved",
             validation_errors=errors,
-            user="step_log_test_api5@example.com",
         )
 
         doc = frappe.get_doc("Onboarding Step Log", result["name"])
@@ -280,8 +275,8 @@ class TestOnboardingStepLog(FrappeTestCase):
     def test_21_completed_at_auto_set_on_skipped(self):
         """Test that completed_at is auto-set when action is 'skipped'."""
         doc = self._create_step_log(
-            step_id="compliance_setup",
-            step_number=6,
+            step_id="compliance",
+            step_number=11,
             action="skipped",
             user="step_log_test_ts2@example.com",
         )
@@ -423,8 +418,8 @@ class TestOnboardingStepLog(FrappeTestCase):
     def test_42_form_data_empty_is_valid(self):
         """Test that None/empty form_data is allowed."""
         doc = self._create_step_log(
-            step_id="compliance_setup",
-            step_number=6,
+            step_id="compliance",
+            step_number=11,
             action="skipped",
             user="step_log_test_fd3@example.com",
         )

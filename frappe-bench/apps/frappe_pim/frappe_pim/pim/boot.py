@@ -177,7 +177,7 @@ def _get_onboarding_status(frappe):
         onboarding_status = getattr(tenant, "onboarding_status", "")
 
         return {
-            "is_complete": onboarding_status == "completed",
+            "is_complete": onboarding_status in ("completed", "skipped"),
             "current_step": int(getattr(tenant, "onboarding_current_step", 0) or 0),
             "total_steps": 12,
             "started_at": str(getattr(tenant, "onboarding_started_at", "") or ""),
