@@ -49,6 +49,20 @@ import IntegrationsStep from './steps/IntegrationsStep.vue'
 import ComplianceStep from './steps/ComplianceStep.vue'
 import SummaryLaunchStep from './steps/SummaryLaunchStep.vue'
 
+// Preview components
+import CompanyCardPreview from './previews/CompanyCardPreview.vue'
+import IndustryProfilePreview from './previews/IndustryProfilePreview.vue'
+import ProductDiagramPreview from './previews/ProductDiagramPreview.vue'
+import AttributeTreePreview from './previews/AttributeTreePreview.vue'
+import CategoryTreePreview from './previews/CategoryTreePreview.vue'
+import ChannelDashPreview from './previews/ChannelDashPreview.vue'
+import LocaleGridPreview from './previews/LocaleGridPreview.vue'
+import WorkflowDiagramPreview from './previews/WorkflowDiagramPreview.vue'
+import QualityGaugePreview from './previews/QualityGaugePreview.vue'
+import IntegrationBoardPreview from './previews/IntegrationBoardPreview.vue'
+import ComplianceListPreview from './previews/ComplianceListPreview.vue'
+import FullSummaryPreview from './previews/FullSummaryPreview.vue'
+
 // ============================================================================
 // Setup
 // ============================================================================
@@ -84,6 +98,29 @@ const stepComponents: Partial<Record<WizardStepId, Component>> = {
 }
 
 // ============================================================================
+// 12-Step Preview Component Registry
+// ============================================================================
+
+/**
+ * Map wizard step IDs to their live preview Vue components.
+ * Each step gets a rich visual preview shown in the right panel.
+ */
+const previewComponents: Partial<Record<WizardStepId, Component>> = {
+  company_info: CompanyCardPreview,
+  industry_selection: IndustryProfilePreview,
+  product_structure: ProductDiagramPreview,
+  attribute_config: AttributeTreePreview,
+  taxonomy: CategoryTreePreview,
+  channel_setup: ChannelDashPreview,
+  localization: LocaleGridPreview,
+  workflow_preferences: WorkflowDiagramPreview,
+  quality_scoring: QualityGaugePreview,
+  integrations: IntegrationBoardPreview,
+  compliance: ComplianceListPreview,
+  summary_launch: FullSummaryPreview,
+}
+
+// ============================================================================
 // Navigation Direction
 // ============================================================================
 
@@ -108,6 +145,13 @@ const activeStepComponent = computed<Component | null>(() => {
   const stepId = wizard.currentStepId.value
   if (!stepId) return null
   return stepComponents[stepId] ?? null
+})
+
+/** The currently active preview component for the right panel */
+const activePreviewComponent = computed<Component | null>(() => {
+  const stepId = wizard.currentStepId.value
+  if (!stepId) return null
+  return previewComponents[stepId] ?? null
 })
 
 /** Current step ID as a string key for transition animations */
@@ -471,56 +515,15 @@ function handleStepClick(stepNumber: number): void {
           :has-preview="livePreview.hasPreview.value"
           :loading="wizard.loading.value"
         >
-          <!-- Preview content slot: step-specific preview components
-               will be added in Phase 7 (Preview Components).
-               For now, render a formatted preview data summary. -->
-          <div
-            v-if="livePreview.previewData.value"
-            class="space-y-4"
-          >
-            <!-- Structured preview data display -->
-            <div
-              v-for="(value, key) in livePreview.previewData.value"
-              :key="key"
-              class="rounded-lg border border-gray-100 bg-white p-3"
-            >
-              <dt class="mb-1 text-xs font-medium uppercase tracking-wider text-pim-muted">
-                {{ String(key).replace(/_/g, ' ') }}
-              </dt>
-              <dd class="text-sm text-pim-text">
-                <template v-if="Array.isArray(value)">
-                  <span v-if="value.length === 0" class="text-gray-400">None</span>
-                  <div v-else class="flex flex-wrap gap-1">
-                    <span
-                      v-for="(item, idx) in value.slice(0, 8)"
-                      :key="idx"
-                      class="rounded-full bg-primary-50 px-2 py-0.5 text-xs text-primary-700"
-                    >
-                      {{ typeof item === 'object' ? (item as Record<string, unknown>).name ?? (item as Record<string, unknown>).label ?? JSON.stringify(item) : item }}
-                    </span>
-                    <span
-                      v-if="value.length > 8"
-                      class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
-                    >
-                      +{{ value.length - 8 }} more
-                    </span>
-                  </div>
-                </template>
-                <template v-else-if="typeof value === 'boolean'">
-                  <span :class="value ? 'text-green-600' : 'text-gray-400'">
-                    {{ value ? 'Yes' : 'No' }}
-                  </span>
-                </template>
-                <template v-else-if="typeof value === 'object' && value !== null">
-                  <span class="text-xs text-gray-500">{{ Object.keys(value).length }} items</span>
-                </template>
-                <template v-else>
-                  <span :class="{ 'text-gray-400': !value }">
-                    {{ value || 'Not set' }}
-                  </span>
-                </template>
-              </dd>
-            </div>
+          <!-- Step-specific rich preview component (Phase 7) -->
+          <component
+            v-if="activePreviewComponent && livePreview.previewData.value"
+            :is="activePreviewComponent"
+            :data="livePreview.previewData.value"
+          />
+          <!-- Fallback for steps without preview data -->
+          <div v-else-if="!livePreview.previewData.value" class="flex items-center justify-center py-8">
+            <p class="text-sm text-pim-muted">Configure this step to see a preview</p>
           </div>
         </LivePreviewPanel>
       </div>

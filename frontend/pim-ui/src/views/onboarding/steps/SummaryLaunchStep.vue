@@ -343,11 +343,8 @@ async function handleLaunch(): Promise<void> {
     launched.value = true
 
     if (result?.success) {
-      emit('next', {
-        ...form,
-        confirm_launch: true,
-        acknowledged_summary: true,
-      })
+      // Redirect is handled by the isCompleted watch in OnboardingWizard.vue
+      // No need to emit 'next' as it would cause double-completion
     }
   } finally {
     launching.value = false
