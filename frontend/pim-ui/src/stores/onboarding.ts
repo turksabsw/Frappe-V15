@@ -444,6 +444,32 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     return requiredStepIds.every((id) => completedSteps.value.includes(id))
   })
 
+  /** Helper: get a specific step's saved data from the status response payload */
+  function getStatusStepData(stepId: string): Record<string, unknown> | null {
+    const entries = (statusResponse.value as unknown as { step_data?: Array<{ step_id: string; data: Record<string, unknown> }> })?.step_data
+    return entries?.find((s) => s.step_id === stepId)?.data ?? null
+  }
+
+  /** Primary role from company_info step (e.g. "Product Manager") */
+  const primaryRole = computed<string | null>(() => {
+    return (getStatusStepData('company_info')?.primary_role as string) ?? null
+  })
+
+  /** Company size range from company_info step (e.g. "201-500") */
+  const companySize = computed<string | null>(() => {
+    return (getStatusStepData('company_info')?.company_size as string) ?? null
+  })
+
+  /** Estimated SKU count range from product_structure step (e.g. "2001-10000") */
+  const estimatedSkuCount = computed<string | null>(() => {
+    return (getStatusStepData('product_structure')?.estimated_sku_count as string) ?? null
+  })
+
+  /** Data import source from product_structure step (e.g. "erp_sync") */
+  const dataImportSource = computed<string | null>(() => {
+    return (getStatusStepData('product_structure')?.data_import_source as string) ?? null
+  })
+
   // =========================================================================
   // Actions — New 12-Step Wizard (Tenant Config)
   // =========================================================================
@@ -480,6 +506,9 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     statusResponse.value = result
     onboardingStatus.value = result.status
     currentWizardStep.value = result.current_step
+    if (result.status === 'error' && result.message) {
+      error.value = result.message
+    }
     isTemplateApplied.value = result.template_applied
     canSkipRemaining.value = result.can_skip_remaining
 
@@ -1392,6 +1421,10 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     allWizardStepStates,
     completedStepCount,
     allRequiredStepsCompleted,
+    primaryRole,
+    companySize,
+    estimatedSkuCount,
+    dataImportSource,
 
     // Actions — New 12-step
     fetchStatus,

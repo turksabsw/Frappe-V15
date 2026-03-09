@@ -144,7 +144,7 @@ function handleSubmit(): void {
       v-for="category in CATEGORIES"
       :key="category"
     >
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         {{ CATEGORY_LABELS[category] }}
       </label>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -154,8 +154,8 @@ function handleSubmit(): void {
           class="flex items-start gap-3 rounded-lg border p-3 text-left transition-all duration-200"
           :class="
             isStandardSelected(standard.value)
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-pim-border hover:border-gray-300'
+              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-300'
           "
           @click="toggleStandard(standard.value)"
         >
@@ -164,7 +164,7 @@ function handleSubmit(): void {
             :class="
               isStandardSelected(standard.value)
                 ? 'border-primary-600 bg-primary-600'
-                : 'border-pim-border'
+                : 'border-gray-300 dark:border-gray-600'
             "
           >
             <svg
@@ -178,27 +178,27 @@ function handleSubmit(): void {
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-pim-text">{{ standard.label }}</p>
-            <p class="text-xs text-pim-muted">{{ standard.description }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ standard.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ standard.description }}</p>
           </div>
         </button>
       </div>
     </div>
 
     <!-- Certification Tracking -->
-    <div class="rounded-lg border border-pim-border p-4">
+    <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
       <div class="flex items-start gap-3">
         <input
           id="certification_tracking"
           v-model="form.certification_tracking"
           type="checkbox"
-          class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+          class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
         />
         <div class="flex-1">
-          <label class="block text-sm font-medium text-pim-text" for="certification_tracking">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white" for="certification_tracking">
             Enable Certification Tracking
           </label>
-          <p class="mt-0.5 text-xs text-pim-muted">
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Track certification status, expiration dates, and renewal reminders
             for each product. Includes audit trail for compliance documentation.
           </p>
@@ -207,11 +207,11 @@ function handleSubmit(): void {
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-amber-50 p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-amber-700">
+      <p class="text-xs text-amber-700 dark:text-amber-400">
         This step is optional. Compliance standards create quality rules that enforce
         required data on products. Products missing compliance data will have reduced
         quality scores. You can skip this step and configure compliance later.

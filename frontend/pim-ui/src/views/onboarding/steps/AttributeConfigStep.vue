@@ -317,26 +317,26 @@ defineExpose({ isValid })
   <div class="space-y-6">
     <!-- Summary Stats -->
     <div class="grid grid-cols-3 gap-3">
-      <div class="rounded-lg border border-pim-border bg-pim-surface p-3 text-center">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ totalAttributeCount }}</p>
-        <p class="text-xs text-pim-muted">Total Attributes</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Total Attributes</p>
       </div>
-      <div class="rounded-lg border border-pim-border bg-pim-surface p-3 text-center">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ customCount }}</p>
-        <p class="text-xs text-pim-muted">Custom Added</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Custom Added</p>
       </div>
-      <div class="rounded-lg border border-pim-border bg-pim-surface p-3 text-center">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-center">
         <p class="text-lg font-semibold text-amber-600">{{ removedCount }}</p>
-        <p class="text-xs text-pim-muted">Removed</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Removed</p>
       </div>
     </div>
 
     <!-- Attribute Groups from Template -->
     <div v-if="(form.attribute_groups ?? []).length > 0">
-      <label class="mb-3 block text-sm font-medium text-pim-text">
+      <label class="mb-3 block text-sm font-medium text-gray-900 dark:text-white">
         Attribute Groups
       </label>
-      <p class="mb-3 text-xs text-pim-muted">
+      <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
         These groups come from your industry template. Toggle groups or individual attributes to customize.
       </p>
 
@@ -344,11 +344,11 @@ defineExpose({ isValid })
         <div
           v-for="(group, gIdx) in form.attribute_groups"
           :key="group.name"
-          class="rounded-lg border border-pim-border"
+          class="rounded-lg border border-gray-300 dark:border-gray-600"
         >
           <!-- Group Header -->
           <div
-            class="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-pim-surface"
+            class="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
             @click="toggleGroup(gIdx)"
           >
             <div class="flex items-center gap-3">
@@ -357,7 +357,7 @@ defineExpose({ isValid })
                 :class="
                   group.enabled
                     ? 'border-primary-600 bg-primary-600'
-                    : 'border-pim-border bg-white'
+                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
                 "
               >
                 <svg
@@ -371,15 +371,15 @@ defineExpose({ isValid })
                 </svg>
               </div>
               <div>
-                <p class="text-sm font-medium text-pim-text">{{ group.label }}</p>
-                <p class="text-xs text-pim-muted">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ group.label }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
                   {{ group.attributes.filter((a) => a.enabled).length }} / {{ group.attributes.length }} attributes enabled
                 </p>
               </div>
             </div>
             <span
               class="text-xs font-medium"
-              :class="group.enabled ? 'text-green-600' : 'text-pim-muted'"
+              :class="group.enabled ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'"
             >
               {{ group.enabled ? 'Enabled' : 'Disabled' }}
             </span>
@@ -388,25 +388,25 @@ defineExpose({ isValid })
           <!-- Group Attributes -->
           <div
             v-if="group.enabled && group.attributes.length > 0"
-            class="border-t border-pim-border px-4 py-2"
+            class="border-t border-gray-300 dark:border-gray-600 px-4 py-2"
           >
             <div class="space-y-1">
               <label
                 v-for="(attr, aIdx) in group.attributes"
                 :key="attr.name"
-                class="flex cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-pim-surface"
+                class="flex cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <input
                   type="checkbox"
                   :checked="attr.enabled"
-                  class="h-3.5 w-3.5 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+                  class="h-3.5 w-3.5 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
                   @change="toggleAttribute(gIdx, aIdx)"
                 />
-                <span class="flex-1 text-xs text-pim-text">{{ attr.label }}</span>
-                <span class="text-[10px] text-pim-muted">{{ attr.type }}</span>
+                <span class="flex-1 text-xs text-gray-900 dark:text-white">{{ attr.label }}</span>
+                <span class="text-[10px] text-gray-500 dark:text-gray-400">{{ attr.type }}</span>
                 <span
                   v-if="attr.from_template"
-                  class="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600"
+                  class="rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] text-blue-600 dark:text-blue-400"
                 >
                   template
                 </span>
@@ -420,9 +420,9 @@ defineExpose({ isValid })
     <!-- No Template Groups Info -->
     <div
       v-else
-      class="rounded-lg border border-dashed border-pim-border p-4 text-center"
+      class="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-center"
     >
-      <p class="text-sm text-pim-muted">
+      <p class="text-sm text-gray-500 dark:text-gray-400">
         No attribute groups from template. Add custom attributes below or go back
         to select an industry profile.
       </p>
@@ -432,17 +432,17 @@ defineExpose({ isValid })
     <div>
       <div class="mb-3 flex items-center justify-between">
         <div>
-          <label class="block text-sm font-medium text-pim-text">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white">
             Custom Attributes
           </label>
-          <p class="text-xs text-pim-muted">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
             Add attributes not covered by the template.
           </p>
         </div>
         <button
           v-if="!showAddForm"
           type="button"
-          class="rounded-lg border border-primary-500 bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-100"
+          class="rounded-lg border border-primary-500 bg-primary-50 dark:bg-primary-900/30 px-3 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-400 transition-colors hover:bg-primary-100 dark:hover:bg-primary-900/50"
           @click="showAddForm = true"
         >
           + Add Attribute
@@ -452,34 +452,34 @@ defineExpose({ isValid })
       <!-- Add Custom Attribute Form -->
       <div
         v-if="showAddForm"
-        class="mb-3 rounded-lg border border-primary-200 bg-primary-50/30 p-4"
+        class="mb-3 rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50/30 dark:bg-primary-900/20 p-4"
       >
         <div class="space-y-3">
           <!-- Label & Name -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="mb-1 block text-xs font-medium text-pim-text" for="attr_label">
+              <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="attr_label">
                 Label <span class="text-red-500">*</span>
               </label>
               <input
                 id="attr_label"
                 v-model="newAttribute.label"
                 type="text"
-                class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
                 placeholder="e.g., Shelf Life"
                 @input="handleLabelInput"
                 @keydown="handleAttrKeydown"
               />
             </div>
             <div>
-              <label class="mb-1 block text-xs font-medium text-pim-text" for="attr_name">
+              <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="attr_name">
                 System Name
               </label>
               <input
                 id="attr_name"
                 v-model="newAttribute.name"
                 type="text"
-                class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
                 placeholder="Auto-generated"
               />
             </div>
@@ -488,13 +488,13 @@ defineExpose({ isValid })
           <!-- Type & Group -->
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="mb-1 block text-xs font-medium text-pim-text" for="attr_type">
+              <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="attr_type">
                 Type
               </label>
               <select
                 id="attr_type"
                 v-model="newAttribute.type"
-                class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
               >
                 <option
                   v-for="t in ATTRIBUTE_TYPES"
@@ -506,13 +506,13 @@ defineExpose({ isValid })
               </select>
             </div>
             <div>
-              <label class="mb-1 block text-xs font-medium text-pim-text" for="attr_group">
+              <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="attr_group">
                 Group
               </label>
               <select
                 id="attr_group"
                 v-model="newAttribute.group"
-                class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
               >
                 <option value="">No group</option>
                 <option
@@ -531,16 +531,16 @@ defineExpose({ isValid })
             <input
               v-model="newAttribute.required"
               type="checkbox"
-              class="h-3.5 w-3.5 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+              class="h-3.5 w-3.5 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
             />
-            <span class="text-xs text-pim-text">Required attribute</span>
+            <span class="text-xs text-gray-900 dark:text-white">Required attribute</span>
           </label>
 
           <!-- Actions -->
           <div class="flex justify-end gap-2">
             <button
               type="button"
-              class="rounded-lg border border-pim-border bg-white px-3 py-1.5 text-xs font-medium text-pim-text transition-colors hover:bg-pim-surface"
+              class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white px-3 py-1.5 text-xs font-medium text-gray-900 dark:text-white transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
               @click="showAddForm = false"
             >
               Cancel
@@ -562,29 +562,29 @@ defineExpose({ isValid })
         <div
           v-for="attr in form.custom_attributes"
           :key="attr.name"
-          class="flex items-center justify-between rounded-lg border border-pim-border px-3 py-2"
+          class="flex items-center justify-between rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2"
         >
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-pim-text">{{ attr.label }}</span>
-            <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-pim-muted">
+            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ attr.label }}</span>
+            <span class="rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400">
               {{ attr.type }}
             </span>
             <span
               v-if="attr.group"
-              class="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600"
+              class="rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] text-blue-600 dark:text-blue-400"
             >
               {{ attr.group }}
             </span>
             <span
               v-if="attr.required"
-              class="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600"
+              class="rounded bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400"
             >
               required
             </span>
           </div>
           <button
             type="button"
-            class="text-pim-muted transition-colors hover:text-red-500"
+            class="text-gray-500 dark:text-gray-400 transition-colors hover:text-red-500"
             @click="removeCustomAttribute(attr.name)"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -596,11 +596,11 @@ defineExpose({ isValid })
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         Attributes define the data fields for your products. You can always add, remove,
         or modify attributes later in Settings. Template attributes provide a starting
         point based on your industry.

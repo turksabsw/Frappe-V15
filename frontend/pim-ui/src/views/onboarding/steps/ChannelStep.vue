@@ -165,10 +165,10 @@ function handleSubmit(): void {
   <div class="space-y-6">
     <!-- Implemented Channels -->
     <div>
-      <label class="mb-3 block text-sm font-medium text-pim-text">
+      <label class="mb-3 block text-sm font-medium text-gray-900 dark:text-white">
         Active Sales Channels
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         Select the channels you currently sell through.
       </p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -178,8 +178,8 @@ function handleSubmit(): void {
           class="flex items-start gap-3 rounded-lg border p-3 text-left transition-all duration-200"
           :class="
             isChannelSelected(channel.value)
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-pim-border hover:border-gray-300'
+              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-300'
           "
           @click="toggleChannel(channel)"
         >
@@ -188,7 +188,7 @@ function handleSubmit(): void {
             :class="
               isChannelSelected(channel.value)
                 ? 'border-primary-600 bg-primary-600'
-                : 'border-pim-border'
+                : 'border-gray-300 dark:border-gray-600'
             "
           >
             <svg
@@ -202,8 +202,8 @@ function handleSubmit(): void {
             </svg>
           </div>
           <div>
-            <p class="text-sm font-medium text-pim-text">{{ channel.label }}</p>
-            <p class="text-xs text-pim-muted">{{ channel.description }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ channel.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ channel.description }}</p>
           </div>
         </button>
       </div>
@@ -211,17 +211,17 @@ function handleSubmit(): void {
 
     <!-- Coming Soon Channels -->
     <div>
-      <label class="mb-3 block text-sm font-medium text-pim-text">
+      <label class="mb-3 block text-sm font-medium text-gray-900 dark:text-white">
         Coming Soon
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         These integrations are under development and will be available soon.
       </p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="channel in COMING_SOON_CHANNELS"
           :key="channel.value"
-          class="flex items-start gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 opacity-60"
+          class="flex items-start gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800 p-3 opacity-60"
         >
           <div
             class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-gray-300"
@@ -245,13 +245,13 @@ function handleSubmit(): void {
 
     <!-- Primary Channel -->
     <div v-if="selectedImplementedChannels.length > 1">
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="primary_channel">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="primary_channel">
         Primary Channel
       </label>
       <select
         id="primary_channel"
         v-model="form.primary_channel"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option
           v-for="channel in selectedImplementedChannels"
@@ -261,14 +261,14 @@ function handleSubmit(): void {
           {{ channel.label }}
         </option>
       </select>
-      <p class="mt-1 text-xs text-pim-muted">
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
         Product data will be optimized for this channel by default.
       </p>
     </div>
 
     <!-- Business Model -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Business Model
       </label>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -278,23 +278,23 @@ function handleSubmit(): void {
           class="rounded-lg border p-3 text-left transition-all duration-200"
           :class="
             form.business_model === model.value
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-pim-border hover:border-gray-300'
+              ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-300'
           "
           @click="form.business_model = model.value"
         >
-          <p class="text-sm font-medium text-pim-text">{{ model.label }}</p>
-          <p class="text-xs text-pim-muted">{{ model.description }}</p>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ model.label }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ model.description }}</p>
         </button>
       </div>
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         You can add or modify channels later in Settings. This helps us configure
         the right attribute sets and data quality rules for your needs.
       </p>

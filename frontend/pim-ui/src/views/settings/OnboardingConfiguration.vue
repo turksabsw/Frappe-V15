@@ -616,10 +616,10 @@ function formatTimestamp(iso: string): string {
           </svg>
         </button>
         <div>
-          <h1 class="text-2xl font-semibold text-pim-text">
+          <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
             Onboarding Configuration
           </h1>
-          <p class="mt-1 text-sm text-pim-muted">
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Edit your PIM configuration settings. Changes are saved per section.
           </p>
         </div>
@@ -644,7 +644,7 @@ function formatTimestamp(iso: string): string {
       <div
         class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"
       />
-      <p class="text-pim-muted">Loading configuration...</p>
+      <p class="text-gray-500 dark:text-gray-400">Loading configuration...</p>
     </div>
 
     <!-- ================================================================== -->
@@ -796,10 +796,10 @@ function formatTimestamp(iso: string): string {
                   v-html="activeSectionConfig.icon"
                 />
                 <div>
-                  <h2 class="text-lg font-semibold text-pim-text">
+                  <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
                     {{ activeSectionConfig.label }}
                   </h2>
-                  <p class="text-sm text-pim-muted">
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ activeSectionConfig.description }}
                   </p>
                 </div>

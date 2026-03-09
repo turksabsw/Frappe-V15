@@ -142,11 +142,10 @@
     },
     {
       "fieldname": "specific_channels",
-      "fieldtype": "Table MultiSelect",
+      "fieldtype": "Small Text",
       "label": "Specific Channels",
-      "options": "PIM Sales Channel",
       "depends_on": "eval:!doc.apply_to_all_channels",
-      "description": "Channels where this segment pricing applies"
+      "description": "Comma-separated list of channel names where this segment pricing applies"
     },
     {
       "fieldname": "section_break_criteria",

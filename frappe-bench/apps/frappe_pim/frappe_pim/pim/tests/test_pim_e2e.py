@@ -120,7 +120,7 @@ class TestFullProductCreationWorkflow(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"e2e_color_{suffix}",
             "attribute_name": f"E2E Color {suffix}",
-            "data_type": "Data",
+            "data_type": "Text",
             "attribute_group": attr_group.name
         })
         color_attr.insert(ignore_permissions=True)
@@ -130,7 +130,7 @@ class TestFullProductCreationWorkflow(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"e2e_size_{suffix}",
             "attribute_name": f"E2E Size {suffix}",
-            "data_type": "Data",
+            "data_type": "Text",
             "attribute_group": attr_group.name
         })
         size_attr.insert(ignore_permissions=True)
@@ -140,11 +140,11 @@ class TestFullProductCreationWorkflow(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"E2E Family {suffix}",
-            "family_code": f"e2e-family-{suffix}",
+            "family_code": f"e2efamily{suffix}",
             "is_group": 0,
-            "attribute_templates": [
-                {"attribute": color_attr.name, "is_required": 1},
-                {"attribute": size_attr.name, "is_required": 0}
+            "attributes": [
+                {"attribute": color_attr.name, "is_required_in_family": 1},
+                {"attribute": size_attr.name, "is_required_in_family": 0}
             ]
         })
         family.insert(ignore_permissions=True)
@@ -250,7 +250,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"var_color_{suffix}",
             "attribute_name": f"Variant Color {suffix}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         color_attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", color_attr.name)
@@ -259,7 +259,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"var_size_{suffix}",
             "attribute_name": f"Variant Size {suffix}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         size_attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", size_attr.name)
@@ -268,7 +268,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Variant Family {suffix}",
-            "family_code": f"var-family-{suffix}",
+            "family_code": f"varfamily{suffix}",
             "is_group": 0,
             "allow_variants": 1,
             "variant_attributes": [
@@ -296,7 +296,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
         parent_family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Parent Family {suffix}",
-            "family_code": f"parent-family-{suffix}",
+            "family_code": f"parentfamily{suffix}",
             "is_group": 1
         })
         parent_family.insert(ignore_permissions=True)
@@ -306,7 +306,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
         child_family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Child Family {suffix}",
-            "family_code": f"child-family-{suffix}",
+            "family_code": f"childfamily{suffix}",
             "is_group": 0,
             "parent_product_family": parent_family.name
         })
@@ -343,7 +343,7 @@ class TestProductFamilyWorkflow(unittest.TestCase):
                 "doctype": "PIM Attribute",
                 "attribute_code": f"attr_{name.lower()}_{suffix}",
                 "attribute_name": f"{name} {suffix}",
-                "data_type": "Data" if name != "Notes" else "Text"
+                "data_type": "Text" if name != "Notes" else "Text"
             })
             attr.insert(ignore_permissions=True)
             self.track_document("PIM Attribute", attr.name)
@@ -353,10 +353,10 @@ class TestProductFamilyWorkflow(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Template Family {suffix}",
-            "family_code": f"template-family-{suffix}",
+            "family_code": f"templatefamily{suffix}",
             "is_group": 0,
-            "attribute_templates": [
-                {"attribute": attr.name, "is_required": 1 if req else 0}
+            "attributes": [
+                {"attribute": attr.name, "is_required_in_family": 1 if req else 0}
                 for attr, req in attrs
             ]
         })
@@ -675,7 +675,7 @@ class TestCompletenessWorkflow(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"req_attr_{suffix}",
             "attribute_name": f"Required Attr {suffix}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
@@ -683,10 +683,10 @@ class TestCompletenessWorkflow(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Completeness Family {suffix}",
-            "family_code": f"comp-family-{suffix}",
+            "family_code": f"compfamily{suffix}",
             "is_group": 0,
-            "attribute_templates": [
-                {"attribute": attr.name, "is_required": 1}
+            "attributes": [
+                {"attribute": attr.name, "is_required_in_family": 1}
             ]
         })
         family.insert(ignore_permissions=True)

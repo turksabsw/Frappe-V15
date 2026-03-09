@@ -165,7 +165,7 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "data_type": "Select",
             "options": "Red,Blue,Green,Black,White",
             "attribute_group": cls.attr_group.name,
-            "is_required": 1,
+            "is_required_in_family": 1,
             "is_filterable": 1,
         })
         cls.attr_color.insert(ignore_permissions=True)
@@ -177,7 +177,7 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "data_type": "Select",
             "options": "S,M,L,XL",
             "attribute_group": cls.attr_group.name,
-            "is_required": 1,
+            "is_required_in_family": 1,
             "is_filterable": 1,
         })
         cls.attr_size.insert(ignore_permissions=True)
@@ -186,9 +186,9 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_name": f"{prefix} Material {suffix}",
             "attribute_code": f"{prefix.lower()}_material_{suffix}",
-            "data_type": "Data",
+            "data_type": "Text",
             "attribute_group": cls.attr_group.name,
-            "is_required": 1,
+            "is_required_in_family": 1,
         })
         cls.attr_material.insert(ignore_permissions=True)
 
@@ -198,7 +198,7 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "attribute_code": f"{prefix.lower()}_weight_{suffix}",
             "data_type": "Float",
             "attribute_group": cls.attr_group.name,
-            "is_required": 0,
+            "is_required_in_family": 0,
         })
         cls.attr_weight.insert(ignore_permissions=True)
 
@@ -901,8 +901,8 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_name": f"{prefix} Fabric {suffix}",
             "attribute_code": f"{prefix.lower()}_fabric_{suffix}",
-            "data_type": "Data",
-            "is_required": 1,
+            "data_type": "Text",
+            "is_required_in_family": 1,
         })
         attr_fabric.insert(ignore_permissions=True)
 
@@ -912,7 +912,7 @@ class TestE2EProductLifecycle(unittest.TestCase):
             "attribute_code": f"{prefix.lower()}_style_{suffix}",
             "data_type": "Select",
             "options": "Casual,Formal,Sport",
-            "is_required": 0,
+            "is_required_in_family": 0,
         })
         attr_style.insert(ignore_permissions=True)
 

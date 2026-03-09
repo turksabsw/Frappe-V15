@@ -4,6 +4,12 @@ import { onboardingGuard } from './guards/onboarding'
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/auth/LoginPage.vue'),
+    meta: { title: 'Login', layout: 'blank', public: true },
+  },
+  {
     path: '/',
     name: 'dashboard',
     component: () => import('@/views/dashboard/Dashboard.vue'),
@@ -39,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     name: 'onboarding-configuration',
     component: () => import('@/views/settings/OnboardingConfiguration.vue'),
     meta: { title: 'Onboarding Configuration' },
+  },
+  {
+    path: '/settings/onboarding-data',
+    name: 'onboarding-data',
+    component: () => import('@/views/settings/OnboardingData.vue'),
+    meta: { title: 'Onboarding Verileri' },
   },
   {
     path: '/list/:doctype',

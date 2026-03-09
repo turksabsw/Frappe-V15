@@ -107,7 +107,7 @@ watch(
   <Teleport to="body">
     <div
       v-if="visible"
-      class="onboarding-modal-overlay"
+      class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Onboarding Wizard"
@@ -115,37 +115,11 @@ watch(
       @click.self.prevent
     >
       <!-- Modal content panel -->
-      <div class="onboarding-modal-panel">
+      <div class="relative w-full max-w-[1100px] max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
         <slot />
       </div>
     </div>
   </Teleport>
 </template>
 
-<style scoped>
-.onboarding-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.onboarding-modal-panel {
-  position: relative;
-  width: 100%;
-  max-width: 1100px;
-  max-height: 85vh;
-  overflow-y: auto;
-  background-color: var(--pim-surface, #ffffff);
-  border-radius: 1rem;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-</style>
+<!-- Styles moved to Tailwind utility classes for proper dark mode support -->

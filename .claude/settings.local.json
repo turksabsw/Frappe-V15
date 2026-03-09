@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bench --site frappe.local execute frappe.db.sql --args '[\"\"SELECT method, error FROM `tabError Log` WHERE method LIKE \\\\\"\"%onboarding%\\\\\"\" ORDER BY creation DESC LIMIT 3\"\"]')"
+    ]
+  }
+}

@@ -371,14 +371,14 @@ watch(
   <div class="space-y-6">
     <!-- Launch Result: Success -->
     <template v-if="launched && isSuccess">
-      <div class="rounded-lg border border-green-200 bg-green-50 p-4">
+      <div class="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 p-4">
         <div class="flex items-center gap-3">
           <svg class="h-8 w-8 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <h3 class="text-lg font-semibold text-green-900">PIM Launched Successfully!</h3>
-            <p class="mt-1 text-sm text-green-700">
+            <h3 class="text-lg font-semibold text-green-900 dark:text-green-300">PIM Launched Successfully!</h3>
+            <p class="mt-1 text-sm text-green-700 dark:text-green-400">
               Your workspace has been configured and is ready to use.
             </p>
           </div>
@@ -386,28 +386,28 @@ watch(
       </div>
 
       <!-- Entities Created -->
-      <div v-if="launchResult?.entities_created" class="rounded-lg border border-pim-border">
-        <div class="border-b border-pim-border px-4 py-3">
-          <h3 class="text-sm font-medium text-pim-text">Created Entities</h3>
+      <div v-if="launchResult?.entities_created" class="rounded-lg border border-gray-300 dark:border-gray-600">
+        <div class="border-b border-gray-300 dark:border-gray-600 px-4 py-3">
+          <h3 class="text-sm font-medium text-gray-900 dark:text-white">Created Entities</h3>
         </div>
         <div
           v-for="(count, entityType) in launchResult.entities_created"
           :key="entityType"
-          class="flex items-center justify-between border-b border-pim-border px-4 py-2.5 last:border-b-0"
+          class="flex items-center justify-between border-b border-gray-300 dark:border-gray-600 px-4 py-2.5 last:border-b-0"
         >
-          <span class="text-sm text-pim-text capitalize">{{ String(entityType).replace(/_/g, ' ') }}</span>
-          <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+          <span class="text-sm text-gray-900 dark:text-white capitalize">{{ String(entityType).replace(/_/g, ' ') }}</span>
+          <span class="rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
             {{ count }}
           </span>
         </div>
       </div>
 
       <!-- Demo Products -->
-      <div v-if="launchResult?.demo_products_created" class="flex items-center gap-2 rounded-lg bg-primary-50 p-3">
+      <div v-if="launchResult?.demo_products_created" class="flex items-center gap-2 rounded-lg bg-primary-50 dark:bg-primary-900/30 p-3">
         <svg class="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
-        <span class="text-sm text-primary-700">
+        <span class="text-sm text-primary-700 dark:text-primary-400">
           {{ launchResult.demo_products_created }} demo products created for testing.
         </span>
       </div>
@@ -417,7 +417,7 @@ watch(
         <p
           v-for="(msg, idx) in launchResult.messages"
           :key="idx"
-          class="text-xs text-pim-muted"
+          class="text-xs text-gray-500 dark:text-gray-400"
         >
           {{ msg }}
         </p>
@@ -426,24 +426,24 @@ watch(
 
     <!-- Launch Result: Failed -->
     <template v-else-if="launched && !isSuccess">
-      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+      <div class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4">
         <div class="flex items-center gap-3">
           <svg class="h-6 w-6 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <h3 class="font-medium text-red-900">Launch encountered issues</h3>
-            <p class="mt-1 text-sm text-red-700">
-              {{ isPartial ? 'Some entities were created, but errors occurred.' : 'The launch process failed. Please try again.' }}
+            <h3 class="font-medium text-red-900 dark:text-red-300">Launch encountered issues</h3>
+            <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+              {{ launchResult?.message || (isPartial ? 'Some entities were created, but errors occurred.' : 'The launch process failed. Please try again.') }}
             </p>
           </div>
         </div>
       </div>
 
       <!-- Errors -->
-      <div v-if="launchResult?.errors?.length" class="rounded-lg border border-red-200 bg-red-50 p-3">
-        <p class="mb-1 text-xs font-medium text-red-800">Errors:</p>
-        <ul class="list-inside list-disc space-y-0.5 text-xs text-red-700">
+      <div v-if="launchResult?.errors?.length" class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-3">
+        <p class="mb-1 text-xs font-medium text-red-800 dark:text-red-300">Errors:</p>
+        <ul class="list-inside list-disc space-y-0.5 text-xs text-red-700 dark:text-red-400">
           <li v-for="(err, idx) in launchResult.errors" :key="idx">{{ err }}</li>
         </ul>
       </div>
@@ -468,8 +468,8 @@ watch(
       <div
         class="flex items-center gap-3 rounded-lg p-4"
         :class="readyToLaunch
-          ? 'border border-green-200 bg-green-50'
-          : 'border border-amber-200 bg-amber-50'
+          ? 'border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950'
+          : 'border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950'
         "
       >
         <svg
@@ -493,13 +493,13 @@ watch(
         <div>
           <h3
             class="font-medium"
-            :class="readyToLaunch ? 'text-green-900' : 'text-amber-900'"
+            :class="readyToLaunch ? 'text-green-900 dark:text-green-300' : 'text-amber-900 dark:text-amber-300'"
           >
             {{ readyToLaunch ? 'Ready to Launch' : 'Almost there' }}
           </h3>
           <p
             class="text-sm"
-            :class="readyToLaunch ? 'text-green-700' : 'text-amber-700'"
+            :class="readyToLaunch ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'"
           >
             {{ completedCount }} of {{ summary.total_steps - 1 }} steps completed
             <span v-if="summary.skipped_steps.length > 0">
@@ -512,12 +512,12 @@ watch(
       <!-- Skipped Steps Notice -->
       <div
         v-if="skippedStepNames.length > 0"
-        class="flex items-start gap-2 rounded-lg bg-pim-surface p-3"
+        class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3"
       >
-        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <p class="text-xs text-pim-muted">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
           Skipped: {{ skippedStepNames.join(', ') }}.
           Default settings will be used. You can configure these later in Settings.
         </p>
@@ -525,20 +525,20 @@ watch(
 
       <!-- Configuration Summary Grid -->
       <div class="space-y-3">
-        <h3 class="text-sm font-medium text-pim-text">Configuration Summary</h3>
+        <h3 class="text-sm font-medium text-gray-900 dark:text-white">Configuration Summary</h3>
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div
             v-for="section in summarySections"
             :key="section.id"
-            class="rounded-lg border border-pim-border p-3"
+            class="rounded-lg border border-gray-300 dark:border-gray-600 p-3"
             :class="{ 'opacity-60': section.skipped }"
           >
             <!-- Section Header -->
             <div class="mb-2 flex items-center gap-2">
               <div
                 class="flex h-6 w-6 items-center justify-center rounded"
-                :class="section.skipped ? 'bg-gray-100' : 'bg-primary-100'"
+                :class="section.skipped ? 'bg-gray-100 dark:bg-gray-700' : 'bg-primary-100 dark:bg-primary-900/40'"
               >
                 <svg
                   class="h-3.5 w-3.5"
@@ -550,12 +550,12 @@ watch(
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="section.icon" />
                 </svg>
               </div>
-              <span class="text-xs font-medium text-pim-text">
+              <span class="text-xs font-medium text-gray-900 dark:text-white">
                 {{ section.title }}
               </span>
               <span
                 v-if="section.skipped"
-                class="ml-auto rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500"
+                class="ml-auto rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400"
               >
                 Skipped
               </span>
@@ -568,8 +568,8 @@ watch(
                 :key="item.label"
                 class="flex items-baseline justify-between gap-2"
               >
-                <dt class="text-[11px] text-pim-muted">{{ item.label }}</dt>
-                <dd class="truncate text-right text-[11px] font-medium text-pim-text">
+                <dt class="text-[11px] text-gray-500 dark:text-gray-400">{{ item.label }}</dt>
+                <dd class="truncate text-right text-[11px] font-medium text-gray-900 dark:text-white">
                   {{ item.value }}
                 </dd>
               </div>
@@ -579,19 +579,19 @@ watch(
       </div>
 
       <!-- Demo Product Toggle -->
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-start gap-3">
           <input
             id="create_demo_products"
             v-model="form.create_demo_products"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div class="flex-1">
-            <label class="block text-sm font-medium text-pim-text" for="create_demo_products">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white" for="create_demo_products">
               Create Demo Products
             </label>
-            <p class="mt-0.5 text-xs text-pim-muted">
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               Generate sample products using your industry template to help you
               explore the system. Demo products can be deleted later.
             </p>
@@ -621,7 +621,7 @@ watch(
           </svg>
           {{ launching ? 'Launching PIM...' : 'Launch PIM' }}
         </button>
-        <p class="mt-2 text-center text-xs text-pim-muted">
+        <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
           This will apply your industry template and create all configured entities.
           You can customize everything after launch in Settings.
         </p>

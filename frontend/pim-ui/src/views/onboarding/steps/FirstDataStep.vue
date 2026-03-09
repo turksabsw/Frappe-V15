@@ -105,14 +105,14 @@ function handleSubmit(): void {
 
     <!-- Product Name -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="product_name">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="product_name">
         Product Name <span class="text-red-500">*</span>
       </label>
       <input
         id="product_name"
         v-model="form.product_name"
         type="text"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         placeholder="e.g., Classic Cotton T-Shirt"
       />
     </div>
@@ -120,14 +120,14 @@ function handleSubmit(): void {
     <!-- Product Type & Family (side by side) -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <label class="mb-1.5 block text-sm font-medium text-pim-text" for="product_type">
+        <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="product_type">
           Product Type
         </label>
         <select
           v-if="!loadingOptions && productTypes.length > 0"
           id="product_type"
           v-model="form.product_type"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         >
           <option value="">Select type</option>
           <option
@@ -143,19 +143,19 @@ function handleSubmit(): void {
           id="product_type"
           v-model="form.product_type"
           type="text"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           :placeholder="loadingOptions ? 'Loading...' : 'Enter product type'"
         />
       </div>
       <div>
-        <label class="mb-1.5 block text-sm font-medium text-pim-text" for="product_family">
+        <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="product_family">
           Product Family
         </label>
         <select
           v-if="!loadingOptions && productFamilies.length > 0"
           id="product_family"
           v-model="form.product_family"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         >
           <option value="">Select family</option>
           <option
@@ -171,7 +171,7 @@ function handleSubmit(): void {
           id="product_family"
           v-model="form.product_family"
           type="text"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           :placeholder="loadingOptions ? 'Loading...' : 'Enter product family'"
         />
       </div>
@@ -179,14 +179,14 @@ function handleSubmit(): void {
 
     <!-- Short Description -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="short_description">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="short_description">
         Short Description
       </label>
       <textarea
         id="short_description"
         v-model="form.short_description"
         rows="3"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         placeholder="Brief product description..."
       />
     </div>

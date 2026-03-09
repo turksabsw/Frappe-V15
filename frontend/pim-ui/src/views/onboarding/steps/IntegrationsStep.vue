@@ -157,22 +157,22 @@ function handleSubmit(): void {
   <div class="space-y-6">
     <!-- ERP Integration Section -->
     <div class="space-y-4">
-      <h3 class="text-sm font-medium text-pim-text">ERP Integration</h3>
+      <h3 class="text-sm font-medium text-gray-900 dark:text-white">ERP Integration</h3>
 
       <!-- ERP Sync Toggle -->
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-start gap-3">
           <input
             id="enable_erp_sync"
             v-model="form.enable_erp_sync"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div class="flex-1">
-            <label class="block text-sm font-medium text-pim-text" for="enable_erp_sync">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white" for="enable_erp_sync">
               Enable ERP Sync
             </label>
-            <p class="mt-0.5 text-xs text-pim-muted">
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               Synchronize product data with your ERP system. Products, pricing,
               and inventory data will be kept in sync automatically.
             </p>
@@ -183,13 +183,13 @@ function handleSubmit(): void {
       <!-- ERP Type (visible when sync enabled) -->
       <div v-if="form.enable_erp_sync" class="space-y-4">
         <div>
-          <label class="mb-1.5 block text-sm font-medium text-pim-text" for="erp_type">
+          <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="erp_type">
             ERP System
           </label>
           <select
             id="erp_type"
             v-model="form.erp_type"
-            class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           >
             <option
               v-for="erp in ERP_TYPES"
@@ -203,27 +203,27 @@ function handleSubmit(): void {
 
         <!-- Sync Direction -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-pim-text">
+          <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
             Sync Direction
           </label>
           <div class="space-y-2">
             <label
               v-for="direction in SYNC_DIRECTIONS"
               :key="direction.value"
-              class="flex cursor-pointer items-start gap-3 rounded-lg border border-pim-border px-4 py-3 transition-colors hover:bg-pim-surface"
+              class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
               :class="{
-                'border-primary-500 bg-primary-50': form.sync_direction === direction.value,
+                'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20': form.sync_direction === direction.value,
               }"
             >
               <input
                 v-model="form.sync_direction"
                 type="radio"
                 :value="direction.value"
-                class="mt-0.5 h-4 w-4 border-pim-border text-primary-600 focus:ring-primary-500"
+                class="mt-0.5 h-4 w-4 border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
               />
               <div>
-                <p class="text-sm font-medium text-pim-text">{{ direction.label }}</p>
-                <p class="text-xs text-pim-muted">{{ direction.description }}</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ direction.label }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ direction.description }}</p>
               </div>
             </label>
           </div>
@@ -233,22 +233,22 @@ function handleSubmit(): void {
 
     <!-- AI Enrichment Section -->
     <div class="space-y-4">
-      <h3 class="text-sm font-medium text-pim-text">AI Enrichment</h3>
+      <h3 class="text-sm font-medium text-gray-900 dark:text-white">AI Enrichment</h3>
 
       <!-- AI Toggle -->
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-start gap-3">
           <input
             id="enable_ai_enrichment"
             v-model="form.enable_ai_enrichment"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div class="flex-1">
-            <label class="block text-sm font-medium text-pim-text" for="enable_ai_enrichment">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white" for="enable_ai_enrichment">
               Enable AI Enrichment
             </label>
-            <p class="mt-0.5 text-xs text-pim-muted">
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               Use AI to automatically generate descriptions, extract attributes,
               tag images, and optimize product content.
             </p>
@@ -259,13 +259,13 @@ function handleSubmit(): void {
       <!-- AI Provider & Use Cases (visible when AI enabled) -->
       <div v-if="form.enable_ai_enrichment" class="space-y-4">
         <div>
-          <label class="mb-1.5 block text-sm font-medium text-pim-text" for="ai_provider">
+          <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="ai_provider">
             AI Provider
           </label>
           <select
             id="ai_provider"
             v-model="form.ai_provider"
-            class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           >
             <option :value="undefined" disabled>Select a provider...</option>
             <option
@@ -280,7 +280,7 @@ function handleSubmit(): void {
 
         <!-- AI Use Cases -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-pim-text">
+          <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
             AI Use Cases
           </label>
           <div class="flex flex-wrap gap-2">
@@ -290,8 +290,8 @@ function handleSubmit(): void {
               class="rounded-full border px-3 py-1.5 text-sm transition-all duration-200"
               :class="
                 isUseCaseSelected(useCase.value)
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-pim-border text-pim-muted hover:border-gray-300'
+                  ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-400'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
               "
               @click="toggleUseCase(useCase.value)"
             >
@@ -304,22 +304,22 @@ function handleSubmit(): void {
 
     <!-- Standards & Data Section -->
     <div class="space-y-4">
-      <h3 class="text-sm font-medium text-pim-text">Standards & Data Management</h3>
+      <h3 class="text-sm font-medium text-gray-900 dark:text-white">Standards & Data Management</h3>
 
       <!-- GS1 Toggle -->
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-start gap-3">
           <input
             id="enable_gs1"
             v-model="form.enable_gs1"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div class="flex-1">
-            <label class="block text-sm font-medium text-pim-text" for="enable_gs1">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white" for="enable_gs1">
               GS1 Barcode Support
             </label>
-            <p class="mt-0.5 text-xs text-pim-muted">
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               Enable GS1 GTIN/EAN barcode validation and management.
               Required for retail and marketplace channel compliance.
             </p>
@@ -328,19 +328,19 @@ function handleSubmit(): void {
       </div>
 
       <!-- MDM Toggle -->
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-start gap-3">
           <input
             id="enable_mdm"
             v-model="form.enable_mdm"
             type="checkbox"
-            class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div class="flex-1">
-            <label class="block text-sm font-medium text-pim-text" for="enable_mdm">
+            <label class="block text-sm font-medium text-gray-900 dark:text-white" for="enable_mdm">
               Master Data Management (MDM)
             </label>
-            <p class="mt-0.5 text-xs text-pim-muted">
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               Enable MDM features for deduplication, golden record management,
               and cross-system data governance.
             </p>
@@ -350,11 +350,11 @@ function handleSubmit(): void {
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         This step is optional. All integrations can be configured or modified later
         in PIM Settings. API keys and credentials are set up after onboarding completes.
       </p>

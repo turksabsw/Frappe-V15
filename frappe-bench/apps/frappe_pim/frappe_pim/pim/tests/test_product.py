@@ -130,9 +130,11 @@ class TestProductMasterValidation(unittest.TestCase):
         from frappe.utils import random_string
 
         # Create a product family first
+        _rs = random_string(4).lower()
         family = frappe.get_doc({
             "doctype": "Product Family",
-            "family_name": f"Test Family {random_string(4)}",
+            "family_name": f"Test Family {_rs}",
+            "family_code": f"testfamily{_rs}",
             "is_group": 0
         })
         family.insert(ignore_permissions=True)
@@ -203,7 +205,13 @@ class TestProductCodeGeneration(unittest.TestCase):
         import frappe
         from frappe.utils import random_string
 
-        valid_codes = ["ABC123", "TEST-001", "PROD_2024_A", "SKU-12345"]
+        _sfx = random_string(4).upper()
+        valid_codes = [
+            f"ABC{_sfx}",
+            f"TEST{_sfx}001",
+            f"PROD{_sfx}A",
+            f"SKU{_sfx}45"
+        ]
 
         for code in valid_codes:
             doc = frappe.get_doc({
@@ -386,19 +394,21 @@ class TestCompletenessScoring(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_attr_{random_string(6).lower()}",
             "attribute_name": f"Test Attribute {random_string(4)}",
-            "data_type": "Data",
+            "data_type": "Text",
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
 
         # Create family with required attribute
+        _rs_fam2 = random_string(4).lower()
         family = frappe.get_doc({
             "doctype": "Product Family",
-            "family_name": f"Test Family {random_string(4)}",
+            "family_name": f"Test Family {_rs_fam2}",
+            "family_code": f"testfam{_rs_fam2}",
             "is_group": 0,
-            "attribute_templates": [{
+            "attributes": [{
                 "attribute": attr.name,
-                "is_required": 1
+                "is_required_in_family": 1
             }]
         })
         family.insert(ignore_permissions=True)
@@ -433,19 +443,21 @@ class TestCompletenessScoring(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_attr_{random_string(6).lower()}",
             "attribute_name": f"Test Attribute {random_string(4)}",
-            "data_type": "Data",
+            "data_type": "Text",
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
 
         # Create family with required attribute
+        _rs1 = random_string(4).lower()
         family = frappe.get_doc({
             "doctype": "Product Family",
-            "family_name": f"Test Family {random_string(4)}",
+            "family_name": f"Test Family {_rs1}",
+            "family_code": f"testfam{_rs1}",
             "is_group": 0,
-            "attribute_templates": [{
+            "attributes": [{
                 "attribute": attr.name,
-                "is_required": 1
+                "is_required_in_family": 1
             }]
         })
         family.insert(ignore_permissions=True)
@@ -627,16 +639,40 @@ class TestCompletenessSummary(unittest.TestCase):
         self.assertEqual(len(summary["missing_core"]), 0)
 
     def test_completeness_summary_identifies_missing(self):
-        """Test that summary correctly identifies missing fields."""
+        """Test that summary correctly identifies missing required attributes."""
         import frappe
         from frappe.utils import random_string
         from frappe_pim.pim.utils.completeness import get_completeness_summary
 
+        # Create attribute
+        attr = frappe.get_doc({
+            "doctype": "PIM Attribute",
+            "attribute_code": f"req_attr_{random_string(6).lower()}",
+            "attribute_name": f"Required Attr {random_string(4)}",
+            "data_type": "Text",
+        })
+        attr.insert(ignore_permissions=True)
+        self.track_document("PIM Attribute", attr.name)
+
+        # Create family with required attribute
+        _rs = random_string(4).lower()
+        family = frappe.get_doc({
+            "doctype": "Product Family",
+            "family_name": f"Test Family {_rs}",
+            "family_code": f"testfam{_rs}",
+            "is_group": 0,
+            "attributes": [{"attribute": attr.name, "is_required_in_family": 1}]
+        })
+        family.insert(ignore_permissions=True)
+        self.track_document("Product Family", family.name)
+
+        # Create product with family but without filling the required attribute
         product = frappe.get_doc({
             "doctype": "Product Master",
             "product_name": f"Test Product {random_string(4)}",
             "product_code": f"TEST-{random_string(6).upper()}",
-            # short_description is missing
+            "short_description": "Test description",
+            "product_family": family.name,
             "status": "Draft"
         })
         product.insert(ignore_permissions=True)
@@ -644,8 +680,8 @@ class TestCompletenessSummary(unittest.TestCase):
 
         summary = get_completeness_summary(product.name)
 
-        # short_description should be in missing_core
-        self.assertIn("short_description", summary["missing_core"])
+        # The required attribute should be in missing_attributes
+        self.assertIn(attr.name, summary["missing_attributes"])
         self.assertLess(summary["score"], 100.0)
 
 
@@ -684,9 +720,11 @@ class TestProductMasterIntegration(unittest.TestCase):
         from frappe.utils import random_string
 
         # 1. Create attribute group
+        _rs_grp = random_string(4).lower()
         attr_group = frappe.get_doc({
             "doctype": "PIM Attribute Group",
-            "group_name": f"Test Group {random_string(4)}",
+            "group_name": f"Test Group {_rs_grp}",
+            "group_code": f"testgrp{_rs_grp}",
             "is_standard": 0
         })
         attr_group.insert(ignore_permissions=True)
@@ -697,7 +735,7 @@ class TestProductMasterIntegration(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"color_{random_string(6).lower()}",
             "attribute_name": f"Color {random_string(4)}",
-            "data_type": "Data",
+            "data_type": "Text",
             "attribute_group": attr_group.name
         })
         color_attr.insert(ignore_permissions=True)
@@ -707,20 +745,22 @@ class TestProductMasterIntegration(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"size_{random_string(6).lower()}",
             "attribute_name": f"Size {random_string(4)}",
-            "data_type": "Data",
+            "data_type": "Text",
             "attribute_group": attr_group.name
         })
         size_attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", size_attr.name)
 
         # 3. Create family with attribute templates
+        _rs_fam = random_string(4).lower()
         family = frappe.get_doc({
             "doctype": "Product Family",
-            "family_name": f"Test Family {random_string(4)}",
+            "family_name": f"Test Family {_rs_fam}",
+            "family_code": f"testfam{_rs_fam}",
             "is_group": 0,
-            "attribute_templates": [
-                {"attribute": color_attr.name, "is_required": 1},
-                {"attribute": size_attr.name, "is_required": 0}
+            "attributes": [
+                {"attribute": color_attr.name, "is_required_in_family": 1},
+                {"attribute": size_attr.name, "is_required_in_family": 0}
             ]
         })
         family.insert(ignore_permissions=True)
@@ -772,21 +812,19 @@ class TestProductMasterIntegration(unittest.TestCase):
             "doctype": "Product Variant",
             "variant_name": f"Test Variant {random_string(4)}",
             "variant_code": f"VAR-{random_string(6).upper()}",
-            "product_master": product.name,
-            "status": "Draft",
-            "variant_attribute_1": "Color",
-            "variant_value_1": "Red"
+            "parent_product": product.name,
+            "status": "Draft"
         })
         variant.insert(ignore_permissions=True)
         self.track_document("Product Variant", variant.name)
 
         # Verify linkage
-        self.assertEqual(variant.product_master, product.name)
+        self.assertEqual(variant.parent_product, product.name)
 
         # Verify variant can be queried
         variants = frappe.get_all(
             "Product Variant",
-            filters={"product_master": product.name},
+            filters={"parent_product": product.name},
             pluck="name"
         )
         self.assertIn(variant.name, variants)

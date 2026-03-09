@@ -52,6 +52,15 @@ TOTAL_ACTIONABLE_STEPS = len(ONBOARDING_STEPS) - 2
 
 class PIMOnboardingState(Document):
 
+    def _validate_links(self):
+        """Skip User link validation — user email is validated by validate_user().
+
+        The User DocType may not have an entry for every tenant user (e.g.,
+        test users or SaaS users authenticated via an external provider).
+        """
+        self.flags.ignore_links = True
+        super()._validate_links()
+
     def validate(self):
         self.validate_step()
         self.validate_user()
@@ -83,9 +92,9 @@ class PIMOnboardingState(Document):
             self.progress_percent = 100
         else:
             step_index = ONBOARDING_STEPS.index(self.current_step)
-            # pending is step 0, completed is the last — actionable steps are in between
+            # pending=0, completed=last; progress counts steps entered (1-based)
             self.progress_percent = round(
-                ((step_index - 1) / TOTAL_ACTIONABLE_STEPS) * 100, 1
+                (step_index / TOTAL_ACTIONABLE_STEPS) * 100, 1
             )
 
     def before_save(self):
@@ -473,6 +482,7 @@ def get_or_create_onboarding_state(user: Optional[str] = None) -> Dict:
         doc = frappe.new_doc("PIM Onboarding State")
         doc.user = user
         doc.current_step = "pending"
+        doc.flags.ignore_links = True
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
 

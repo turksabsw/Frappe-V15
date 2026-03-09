@@ -3,7 +3,9 @@ export default {
   content: [
     './index.html',
     './src/**/*.{vue,js,ts,jsx,tsx}',
+    './node_modules/flowbite/**/*.js',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -20,19 +22,13 @@ export default {
           900: '#1e3a8a',
           950: '#172554',
         },
-        pim: {
-          bg: '#f8fafc',
-          surface: '#ffffff',
-          border: '#e2e8f0',
-          text: '#1e293b',
-          muted: '#64748b',
-          accent: '#2563eb',
-        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('flowbite/plugin'),
+  ],
 }

@@ -15,9 +15,10 @@
  */
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useProductStore } from '@/stores/product'
+import { useFrappeAPI } from '@/composables/useFrappeAPI'
 import VariantManager from './VariantManager.vue'
 import type {
   ProductMaster,
@@ -26,10 +27,12 @@ import type {
   ProductMedia,
 } from '@/types'
 
-const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const store = useProductStore()
+const api = useFrappeAPI()
+
+const LINK_DROPDOWN_LIMIT = 10
 
 // =========================================================================
 // Props & Route Params
@@ -156,6 +159,95 @@ watch(form, () => {
 watch(attributeValues, () => {
   isDirty.value = true
 }, { deep: true })
+
+// =========================================================================
+// Link Field Dropdowns
+// =========================================================================
+
+/** Which fieldname has its dropdown open (null = none) */
+const linkDropdownOpen = ref<string | null>(null)
+/** Fetched options per fieldname */
+const linkOptions = ref<Record<string, string[]>>({})
+/** Loading state per fieldname */
+const linkSearchLoading = ref<Record<string, boolean>>({})
+/** Current search query per fieldname */
+const linkSearchQuery = ref<Record<string, string>>({})
+
+/** Map of fieldname → linked DocType */
+const LINK_FIELD_DOCTYPES: Record<string, string> = {
+  product_type: 'PIM Product Type',
+  product_family: 'Product Family',
+  category: 'Category',
+  brand: 'Brand',
+}
+
+let linkSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+type LinkOptionRow = { name: string }
+
+async function fetchLinkOptions(fieldname: string, query: string): Promise<void> {
+  const linkedDoctype = LINK_FIELD_DOCTYPES[fieldname]
+  if (!linkedDoctype) return
+  linkSearchLoading.value = { ...linkSearchLoading.value, [fieldname]: true }
+  try {
+    const search = query?.trim()
+    const filters = search ? ([['name', 'like', '%' + search + '%']] as [string, string, string][]) : undefined
+    const list = await api.getList<LinkOptionRow>({
+      doctype: linkedDoctype,
+      fields: ['name'],
+      limit_page_length: LINK_DROPDOWN_LIMIT,
+      order_by: 'name asc',
+      filters,
+    })
+    linkOptions.value = { ...linkOptions.value, [fieldname]: list.map((r) => r.name) }
+  } catch {
+    linkOptions.value = { ...linkOptions.value, [fieldname]: [] }
+  } finally {
+    linkSearchLoading.value = { ...linkSearchLoading.value, [fieldname]: false }
+  }
+}
+
+function openLinkDropdown(fieldname: string): void {
+  linkDropdownOpen.value = fieldname
+  const current = (form.value as Record<string, unknown>)[fieldname] as string ?? ''
+  linkSearchQuery.value = { ...linkSearchQuery.value, [fieldname]: current }
+  fetchLinkOptions(fieldname, current)
+}
+
+function closeLinkDropdown(): void {
+  linkDropdownOpen.value = null
+}
+
+function isLinkDropdownOpen(fieldname: string): boolean {
+  return linkDropdownOpen.value === fieldname
+}
+
+function getLinkOptions(fieldname: string): string[] {
+  return linkOptions.value[fieldname] ?? []
+}
+
+function getLinkSearchQuery(fieldname: string): string {
+  return linkSearchQuery.value[fieldname] ?? ''
+}
+
+function setLinkSearchQuery(fieldname: string, value: string): void {
+  linkSearchQuery.value = { ...linkSearchQuery.value, [fieldname]: value }
+  if (linkSearchTimer) clearTimeout(linkSearchTimer)
+  linkSearchTimer = setTimeout(() => {
+    fetchLinkOptions(fieldname, value)
+    linkSearchTimer = null
+  }, 250)
+}
+
+function selectLinkOption(fieldname: string, value: string): void {
+  ;(form.value as Record<string, unknown>)[fieldname] = value
+  closeLinkDropdown()
+}
+
+function openCreateNewDoc(linkedDoctype: string): void {
+  router.push(`/doc/${encodeURIComponent(linkedDoctype)}/new`)
+  closeLinkDropdown()
+}
 
 // =========================================================================
 // Actions
@@ -298,7 +390,6 @@ onMounted(async () => {
       await store.fetchVariants(props.id)
     }
   }
-  await store.fetchFamilies()
 })
 
 onBeforeUnmount(() => {
@@ -311,14 +402,14 @@ onBeforeUnmount(() => {
     <!-- Page Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <button class="btn-ghost p-2" @click="goBack">
+        <button class="rounded-lg p-2.5 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="goBack">
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
         <div>
-          <h1 class="text-2xl font-bold text-pim-text">{{ pageTitle }}</h1>
-          <p v-if="!isNewProduct" class="mt-0.5 text-sm text-pim-muted">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ pageTitle }}</h1>
+          <p v-if="!isNewProduct" class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
             {{ form.product_code }}
           </p>
         </div>
@@ -344,7 +435,7 @@ onBeforeUnmount(() => {
         <!-- Delete button (existing product only) -->
         <button
           v-if="!isNewProduct"
-          class="btn-ghost text-red-500 hover:text-red-700"
+          class="rounded-lg p-2.5 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700"
           @click="confirmDeleteProduct"
         >
           {{ t('common.delete') }}
@@ -352,7 +443,7 @@ onBeforeUnmount(() => {
 
         <!-- Save button -->
         <button
-          class="btn-primary inline-flex items-center gap-2"
+          class="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
           :disabled="store.saveLoading"
           @click="saveProduct"
         >
@@ -390,7 +481,7 @@ onBeforeUnmount(() => {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span class="text-pim-muted">{{ t('common.loading') }}</span>
+        <span class="text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</span>
       </div>
     </div>
 
@@ -399,7 +490,7 @@ onBeforeUnmount(() => {
       <!-- Left Column: Tabs & Content -->
       <div class="lg:col-span-3">
         <!-- Tab Navigation -->
-        <div class="border-b border-pim-border">
+        <div class="border-b border-gray-200 dark:border-gray-700">
           <nav class="-mb-px flex gap-6">
             <button
               v-for="tab in tabs"
@@ -409,7 +500,7 @@ onBeforeUnmount(() => {
               :class="
                 activeTab === tab.key
                   ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-pim-muted hover:border-gray-300 hover:text-pim-text'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-900 dark:text-white'
               "
               @click="activeTab = tab.key"
             >
@@ -428,11 +519,11 @@ onBeforeUnmount(() => {
         <div v-if="activeTab === 'general'" class="mt-6 space-y-6">
           <!-- Core Fields -->
           <div class="card">
-            <h3 class="mb-4 text-lg font-medium text-pim-text">Basic Information</h3>
+            <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Basic Information</h3>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <!-- Product Name -->
               <div class="md:col-span-2">
-                <label class="mb-1 block text-sm font-medium text-pim-text">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">
                   Product Name <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -445,7 +536,7 @@ onBeforeUnmount(() => {
 
               <!-- Product Code -->
               <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">
                   Product Code <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -459,7 +550,7 @@ onBeforeUnmount(() => {
 
               <!-- Status -->
               <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Status</label>
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Status</label>
                 <select v-model="form.status" class="input w-full">
                   <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
@@ -467,58 +558,206 @@ onBeforeUnmount(() => {
                 </select>
               </div>
 
-              <!-- Product Type -->
-              <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Product Type</label>
-                <input
-                  v-model="form.product_type"
-                  type="text"
-                  class="input w-full"
-                  placeholder="Select product type"
-                />
+              <!-- Product Type (link dropdown) -->
+              <div class="relative">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Product Type</label>
+                <div class="relative">
+                  <input
+                    type="text"
+                    :value="isLinkDropdownOpen('product_type') ? getLinkSearchQuery('product_type') : (form.product_type ?? '')"
+                    class="input w-full pe-10"
+                    placeholder="Search product type..."
+                    autocomplete="off"
+                    @focus="openLinkDropdown('product_type')"
+                    @input="setLinkSearchQuery('product_type', ($event.target as HTMLInputElement).value)"
+                    @blur="setTimeout(closeLinkDropdown, 180)"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div
+                  v-if="isLinkDropdownOpen('product_type')"
+                  class="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+                >
+                  <div v-if="linkSearchLoading['product_type']" class="flex items-center justify-center px-4 py-6">
+                    <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                  </div>
+                  <template v-else>
+                    <ul class="py-1">
+                      <li v-for="opt in getLinkOptions('product_type')" :key="opt">
+                        <button type="button" class="block w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600" @mousedown.prevent="selectLinkOption('product_type', opt)">
+                          {{ opt }}
+                        </button>
+                      </li>
+                      <li v-if="getLinkOptions('product_type').length === 0" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No results found
+                      </li>
+                    </ul>
+                    <div class="border-t border-gray-200 p-2 dark:border-gray-600">
+                      <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-primary-600 hover:bg-gray-100 dark:text-primary-400 dark:hover:bg-gray-600" @mousedown.prevent="openCreateNewDoc('PIM Product Type')">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Create new PIM Product Type
+                      </button>
+                    </div>
+                  </template>
+                </div>
               </div>
 
-              <!-- Product Family -->
-              <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Product Family</label>
-                <select v-model="form.product_family" class="input w-full">
-                  <option value="">No family</option>
-                  <option v-for="family in store.families" :key="family.name" :value="family.name">
-                    {{ family.family_name }}
-                  </option>
-                </select>
+              <!-- Product Family (link dropdown) -->
+              <div class="relative">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Product Family</label>
+                <div class="relative">
+                  <input
+                    type="text"
+                    :value="isLinkDropdownOpen('product_family') ? getLinkSearchQuery('product_family') : (form.product_family ?? '')"
+                    class="input w-full pe-10"
+                    placeholder="Search product family..."
+                    autocomplete="off"
+                    @focus="openLinkDropdown('product_family')"
+                    @input="setLinkSearchQuery('product_family', ($event.target as HTMLInputElement).value)"
+                    @blur="setTimeout(closeLinkDropdown, 180)"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div
+                  v-if="isLinkDropdownOpen('product_family')"
+                  class="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+                >
+                  <div v-if="linkSearchLoading['product_family']" class="flex items-center justify-center px-4 py-6">
+                    <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                  </div>
+                  <template v-else>
+                    <ul class="py-1">
+                      <li v-for="opt in getLinkOptions('product_family')" :key="opt">
+                        <button type="button" class="block w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600" @mousedown.prevent="selectLinkOption('product_family', opt)">
+                          {{ opt }}
+                        </button>
+                      </li>
+                      <li v-if="getLinkOptions('product_family').length === 0" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No results found
+                      </li>
+                    </ul>
+                    <div class="border-t border-gray-200 p-2 dark:border-gray-600">
+                      <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-primary-600 hover:bg-gray-100 dark:text-primary-400 dark:hover:bg-gray-600" @mousedown.prevent="openCreateNewDoc('Product Family')">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Create new Product Family
+                      </button>
+                    </div>
+                  </template>
+                </div>
               </div>
 
-              <!-- Category -->
-              <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Category</label>
-                <input
-                  v-model="form.category"
-                  type="text"
-                  class="input w-full"
-                  placeholder="Select category"
-                />
+              <!-- Category (link dropdown) -->
+              <div class="relative">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Category</label>
+                <div class="relative">
+                  <input
+                    type="text"
+                    :value="isLinkDropdownOpen('category') ? getLinkSearchQuery('category') : (form.category ?? '')"
+                    class="input w-full pe-10"
+                    placeholder="Search category..."
+                    autocomplete="off"
+                    @focus="openLinkDropdown('category')"
+                    @input="setLinkSearchQuery('category', ($event.target as HTMLInputElement).value)"
+                    @blur="setTimeout(closeLinkDropdown, 180)"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div
+                  v-if="isLinkDropdownOpen('category')"
+                  class="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+                >
+                  <div v-if="linkSearchLoading['category']" class="flex items-center justify-center px-4 py-6">
+                    <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                  </div>
+                  <template v-else>
+                    <ul class="py-1">
+                      <li v-for="opt in getLinkOptions('category')" :key="opt">
+                        <button type="button" class="block w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600" @mousedown.prevent="selectLinkOption('category', opt)">
+                          {{ opt }}
+                        </button>
+                      </li>
+                      <li v-if="getLinkOptions('category').length === 0" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No results found
+                      </li>
+                    </ul>
+                    <div class="border-t border-gray-200 p-2 dark:border-gray-600">
+                      <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-primary-600 hover:bg-gray-100 dark:text-primary-400 dark:hover:bg-gray-600" @mousedown.prevent="openCreateNewDoc('Category')">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Create new Category
+                      </button>
+                    </div>
+                  </template>
+                </div>
               </div>
 
-              <!-- Brand -->
-              <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Brand</label>
-                <input
-                  v-model="form.brand"
-                  type="text"
-                  class="input w-full"
-                  placeholder="Enter brand"
-                />
+              <!-- Brand (link dropdown) -->
+              <div class="relative">
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Brand</label>
+                <div class="relative">
+                  <input
+                    type="text"
+                    :value="isLinkDropdownOpen('brand') ? getLinkSearchQuery('brand') : (form.brand ?? '')"
+                    class="input w-full pe-10"
+                    placeholder="Search brand..."
+                    autocomplete="off"
+                    @focus="openLinkDropdown('brand')"
+                    @input="setLinkSearchQuery('brand', ($event.target as HTMLInputElement).value)"
+                    @blur="setTimeout(closeLinkDropdown, 180)"
+                  />
+                  <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-3">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <div
+                  v-if="isLinkDropdownOpen('brand')"
+                  class="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
+                >
+                  <div v-if="linkSearchLoading['brand']" class="flex items-center justify-center px-4 py-6">
+                    <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                  </div>
+                  <template v-else>
+                    <ul class="py-1">
+                      <li v-for="opt in getLinkOptions('brand')" :key="opt">
+                        <button type="button" class="block w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600" @mousedown.prevent="selectLinkOption('brand', opt)">
+                          {{ opt }}
+                        </button>
+                      </li>
+                      <li v-if="getLinkOptions('brand').length === 0" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                        No results found
+                      </li>
+                    </ul>
+                    <div class="border-t border-gray-200 p-2 dark:border-gray-600">
+                      <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-primary-600 hover:bg-gray-100 dark:text-primary-400 dark:hover:bg-gray-600" @mousedown.prevent="openCreateNewDoc('Brand')">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Create new Brand
+                      </button>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Descriptions -->
           <div class="card">
-            <h3 class="mb-4 text-lg font-medium text-pim-text">Descriptions</h3>
+            <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Descriptions</h3>
             <div class="space-y-4">
               <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Short Description</label>
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Short Description</label>
                 <textarea
                   v-model="form.short_description"
                   class="input w-full"
@@ -527,7 +766,7 @@ onBeforeUnmount(() => {
                 />
               </div>
               <div>
-                <label class="mb-1 block text-sm font-medium text-pim-text">Long Description</label>
+                <label class="mb-1 block text-sm font-medium text-gray-900 dark:text-white">Long Description</label>
                 <textarea
                   v-model="form.long_description"
                   class="input w-full"
@@ -540,7 +779,7 @@ onBeforeUnmount(() => {
 
           <!-- Variant Configuration -->
           <div class="card">
-            <h3 class="mb-4 text-lg font-medium text-pim-text">Variant Configuration</h3>
+            <h3 class="mb-4 text-lg font-medium text-gray-900 dark:text-white">Variant Configuration</h3>
             <div class="flex items-center gap-3">
               <label class="relative inline-flex cursor-pointer items-center">
                 <input
@@ -550,9 +789,9 @@ onBeforeUnmount(() => {
                 />
                 <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-600 peer-checked:after:translate-x-full peer-checked:after:border-white" />
               </label>
-              <span class="text-sm text-pim-text">This product has variants</span>
+              <span class="text-sm text-gray-900 dark:text-white">This product has variants</span>
             </div>
-            <p v-if="form.has_variants" class="mt-2 text-sm text-pim-muted">
+            <p v-if="form.has_variants" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Configure variants in the Variants tab. You can define variant axes (e.g., Color, Size) and generate combinations.
             </p>
           </div>
@@ -562,8 +801,8 @@ onBeforeUnmount(() => {
         <div v-if="activeTab === 'attributes'" class="mt-6 space-y-4">
           <div class="card">
             <div class="mb-4 flex items-center justify-between">
-              <h3 class="text-lg font-medium text-pim-text">Attribute Values</h3>
-              <button class="btn-secondary text-sm" @click="addAttributeValue">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Attribute Values</h3>
+              <button class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700" @click="addAttributeValue">
                 <svg class="mr-1 inline-block h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -573,11 +812,11 @@ onBeforeUnmount(() => {
 
             <!-- Empty state -->
             <div v-if="attributeValues.length === 0" class="py-8 text-center">
-              <svg class="mx-auto h-10 w-10 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="mx-auto h-10 w-10 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <p class="mt-2 text-sm text-pim-muted">No attribute values defined yet.</p>
-              <p class="text-xs text-pim-muted">
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No attribute values defined yet.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
                 Attributes are inherited from the product family, or you can add them manually.
               </p>
             </div>
@@ -587,11 +826,11 @@ onBeforeUnmount(() => {
               <div
                 v-for="(attr, index) in attributeValues"
                 :key="index"
-                class="flex items-start gap-3 rounded-lg border border-pim-border p-3"
+                class="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3"
               >
                 <!-- Attribute name -->
                 <div class="min-w-0 flex-1">
-                  <label class="mb-1 block text-xs font-medium text-pim-muted">Attribute</label>
+                  <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Attribute</label>
                   <input
                     :value="attr.attribute"
                     type="text"
@@ -603,7 +842,7 @@ onBeforeUnmount(() => {
 
                 <!-- Value type -->
                 <div class="w-28">
-                  <label class="mb-1 block text-xs font-medium text-pim-muted">Type</label>
+                  <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Type</label>
                   <select
                     :value="attr.value_type"
                     class="input w-full text-sm"
@@ -620,7 +859,7 @@ onBeforeUnmount(() => {
 
                 <!-- Value input (type-aware) -->
                 <div class="min-w-0 flex-1">
-                  <label class="mb-1 block text-xs font-medium text-pim-muted">Value</label>
+                  <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Value</label>
                   <!-- Text value -->
                   <input
                     v-if="attr.value_type === 'String' || !attr.value_type"
@@ -688,7 +927,7 @@ onBeforeUnmount(() => {
 
                 <!-- Unit -->
                 <div class="w-20">
-                  <label class="mb-1 block text-xs font-medium text-pim-muted">Unit</label>
+                  <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Unit</label>
                   <input
                     :value="attr.unit"
                     type="text"
@@ -701,7 +940,7 @@ onBeforeUnmount(() => {
                 <!-- Remove button -->
                 <div class="flex items-end pb-0.5">
                   <button
-                    class="btn-ghost p-1.5 text-red-500 hover:text-red-700"
+                    class="rounded-lg p-2.5 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700"
                     title="Remove attribute"
                     @click="removeAttributeValue(index)"
                   >
@@ -723,7 +962,7 @@ onBeforeUnmount(() => {
             :product-family="form.product_family || ''"
           />
           <div v-else class="card py-8 text-center">
-            <p class="text-sm text-pim-muted">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               Save the product first to manage variants.
             </p>
           </div>
@@ -733,8 +972,8 @@ onBeforeUnmount(() => {
         <div v-if="activeTab === 'media'" class="mt-6 space-y-4">
           <div class="card">
             <div class="mb-4 flex items-center justify-between">
-              <h3 class="text-lg font-medium text-pim-text">Product Media</h3>
-              <button class="btn-secondary text-sm">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Product Media</h3>
+              <button class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700">
                 <svg class="mr-1 inline-block h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -744,11 +983,11 @@ onBeforeUnmount(() => {
 
             <!-- Empty state -->
             <div v-if="mediaItems.length === 0" class="py-8 text-center">
-              <svg class="mx-auto h-10 w-10 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="mx-auto h-10 w-10 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p class="mt-2 text-sm text-pim-muted">No media uploaded yet.</p>
-              <p class="text-xs text-pim-muted">
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No media uploaded yet.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
                 Upload images, videos, or documents for this product.
               </p>
             </div>
@@ -758,7 +997,7 @@ onBeforeUnmount(() => {
               <div
                 v-for="(item, index) in mediaItems"
                 :key="index"
-                class="group relative rounded-lg border border-pim-border p-2"
+                class="group relative rounded-lg border border-gray-200 dark:border-gray-700 p-2"
                 :class="{ 'ring-2 ring-primary-500': item.is_primary }"
               >
                 <!-- Media thumbnail -->
@@ -794,10 +1033,10 @@ onBeforeUnmount(() => {
 
                 <!-- Media info -->
                 <div class="mt-2">
-                  <p class="truncate text-xs font-medium text-pim-text">
+                  <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
                     {{ item.title || item.file }}
                   </p>
-                  <p class="text-xs text-pim-muted">{{ item.media_type }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.media_type }}</p>
                 </div>
 
                 <!-- Primary badge -->
@@ -834,7 +1073,7 @@ onBeforeUnmount(() => {
       <div class="space-y-4">
         <!-- Completeness Card -->
         <div class="card">
-          <h4 class="text-sm font-medium text-pim-text">Completeness</h4>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Completeness</h4>
           <div class="mt-3">
             <div class="flex items-end gap-2">
               <span class="text-3xl font-bold" :class="completenessColor">
@@ -853,7 +1092,7 @@ onBeforeUnmount(() => {
 
         <!-- Status Card -->
         <div class="card">
-          <h4 class="text-sm font-medium text-pim-text">Product Status</h4>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Product Status</h4>
           <div class="mt-2">
             <span
               class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
@@ -871,7 +1110,7 @@ onBeforeUnmount(() => {
 
         <!-- ERPNext Sync Card -->
         <div v-if="syncStatusDisplay" class="card">
-          <h4 class="text-sm font-medium text-pim-text">ERPNext Sync</h4>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">ERPNext Sync</h4>
           <div class="mt-2 space-y-2">
             <div class="flex items-center gap-2">
               <span
@@ -881,10 +1120,10 @@ onBeforeUnmount(() => {
                 {{ syncStatusDisplay.status }}
               </span>
             </div>
-            <div v-if="syncStatusDisplay.erp_item" class="text-xs text-pim-muted">
+            <div v-if="syncStatusDisplay.erp_item" class="text-xs text-gray-500 dark:text-gray-400">
               <span class="font-medium">ERP Item:</span> {{ syncStatusDisplay.erp_item }}
             </div>
-            <div v-if="syncStatusDisplay.last_synced" class="text-xs text-pim-muted">
+            <div v-if="syncStatusDisplay.last_synced" class="text-xs text-gray-500 dark:text-gray-400">
               <span class="font-medium">Last synced:</span> {{ syncStatusDisplay.last_synced }}
             </div>
           </div>
@@ -892,8 +1131,8 @@ onBeforeUnmount(() => {
 
         <!-- Quick Info Card -->
         <div v-if="!isNewProduct && store.currentProduct" class="card">
-          <h4 class="text-sm font-medium text-pim-text">Details</h4>
-          <div class="mt-2 space-y-2 text-xs text-pim-muted">
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Details</h4>
+          <div class="mt-2 space-y-2 text-xs text-gray-500 dark:text-gray-400">
             <div>
               <span class="font-medium">Created:</span>
               {{ store.currentProduct.creation }}
@@ -911,12 +1150,12 @@ onBeforeUnmount(() => {
 
         <!-- Variants Summary Card -->
         <div v-if="!isNewProduct && form.has_variants" class="card">
-          <h4 class="text-sm font-medium text-pim-text">Variants</h4>
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">Variants</h4>
           <div class="mt-2">
-            <p class="text-2xl font-bold text-pim-text">
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">
               {{ store.currentVariants.length }}
             </p>
-            <p class="text-xs text-pim-muted">variant{{ store.currentVariants.length !== 1 ? 's' : '' }} defined</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">variant{{ store.currentVariants.length !== 1 ? 's' : '' }} defined</p>
             <button
               class="mt-2 text-xs font-medium text-primary-600 hover:text-primary-700"
               @click="activeTab = 'variants'"
@@ -936,12 +1175,12 @@ onBeforeUnmount(() => {
         @click.self="cancelDelete"
       >
         <div class="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-          <h3 class="text-lg font-semibold text-pim-text">Delete Product</h3>
-          <p class="mt-2 text-sm text-pim-muted">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Product</h3>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Are you sure you want to delete "{{ form.product_name }}"? This will also delete all associated variants and attribute values. This action cannot be undone.
           </p>
           <div class="mt-6 flex justify-end gap-3">
-            <button class="btn-ghost" @click="cancelDelete">
+            <button class="rounded-lg p-2.5 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="cancelDelete">
               {{ t('common.cancel') }}
             </button>
             <button

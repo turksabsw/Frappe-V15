@@ -6,6 +6,20 @@ import App from './App.vue'
 import router from './router'
 
 import './assets/css/main.css'
+import 'flowbite'
+
+// Dark mode init is in index.html <script> for instant apply (no flash).
+// OS preference listener for when user hasn't chosen manually:
+;(function () {
+  if (!localStorage.getItem('pim-theme')) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('pim-theme')) {
+        document.documentElement.classList.toggle('dark', e.matches)
+        document.documentElement.style.colorScheme = e.matches ? 'only dark' : 'only light'
+      }
+    })
+  }
+})()
 
 const i18n = createI18n({
   legacy: false,

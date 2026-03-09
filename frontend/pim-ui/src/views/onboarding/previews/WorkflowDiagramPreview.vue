@@ -36,20 +36,20 @@ const COMPLEXITY_META: Record<string, {
   simple: {
     label: 'Simple',
     description: 'Draft → Published',
-    color: 'text-green-700',
-    bgColor: 'bg-green-50',
+    color: 'text-green-700 dark:text-green-400',
+    bgColor: 'bg-green-50 dark:bg-green-950',
   },
   standard: {
     label: 'Standard',
     description: 'Draft → Review → Published',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-50',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
   },
   advanced: {
     label: 'Advanced',
     description: 'Draft → Enrichment → Review → Approval → Published',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-50',
+    color: 'text-purple-700 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-950',
   },
 }
 
@@ -57,8 +57,8 @@ const COMPLEXITY_META: Record<string, {
 const DEFAULT_COMPLEXITY = {
   label: 'Unknown',
   description: '',
-  color: 'text-gray-700',
-  bgColor: 'bg-gray-50',
+  color: 'text-gray-700 dark:text-gray-400',
+  bgColor: 'bg-gray-50 dark:bg-gray-800',
 }
 
 /** Whether there is any workflow data to display */
@@ -115,8 +115,8 @@ const enabledFeatureCount = computed(() => {
     </div>
 
     <!-- State Machine Diagram -->
-    <div v-if="hasContent" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h4 class="mb-4 text-xs font-medium uppercase tracking-wider text-pim-muted">
+    <div v-if="hasContent" class="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-5 shadow-sm">
+      <h4 class="mb-4 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Workflow States
       </h4>
 
@@ -167,12 +167,12 @@ const enabledFeatureCount = computed(() => {
 
             <!-- State Info -->
             <div class="flex-1">
-              <p class="text-sm font-medium text-pim-text">
+              <p class="text-sm font-medium text-gray-900 dark:text-white">
                 {{ state.label }}
               </p>
-              <p v-if="state.is_initial" class="text-[10px] text-pim-muted">Initial state</p>
-              <p v-else-if="state.is_final" class="text-[10px] text-pim-muted">Final state</p>
-              <p v-else class="text-[10px] text-pim-muted">
+              <p v-if="state.is_initial" class="text-[10px] text-gray-500 dark:text-gray-400">Initial state</p>
+              <p v-else-if="state.is_final" class="text-[10px] text-gray-500 dark:text-gray-400">Final state</p>
+              <p v-else class="text-[10px] text-gray-500 dark:text-gray-400">
                 {{ state.transitions_to.length }} {{ state.transitions_to.length === 1 ? 'transition' : 'transitions' }}
               </p>
             </div>
@@ -206,10 +206,10 @@ const enabledFeatureCount = computed(() => {
     </div>
 
     <!-- Workflow Features -->
-    <div v-if="hasContent" class="rounded-lg border border-gray-100 bg-white p-4">
-      <h4 class="mb-3 text-xs font-medium uppercase tracking-wider text-pim-muted">
+    <div v-if="hasContent" class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-4">
+      <h4 class="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Workflow Features
-        <span class="ml-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px]">
+        <span class="ml-1 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px]">
           {{ enabledFeatureCount }}/{{ activeFeatures.length }}
         </span>
       </h4>
@@ -223,7 +223,7 @@ const enabledFeatureCount = computed(() => {
           <!-- Feature Icon -->
           <div
             class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded"
-            :class="feature.enabled ? 'bg-green-100' : 'bg-gray-100'"
+            :class="feature.enabled ? 'bg-green-100 dark:bg-green-900/40' : 'bg-gray-100 dark:bg-gray-700'"
           >
             <svg
               class="h-3.5 w-3.5"
@@ -240,7 +240,7 @@ const enabledFeatureCount = computed(() => {
           <!-- Feature Label -->
           <span
             class="flex-1 text-xs"
-            :class="feature.enabled ? 'font-medium text-pim-text' : 'text-pim-muted'"
+            :class="feature.enabled ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'"
           >
             {{ feature.label }}
           </span>
@@ -248,10 +248,10 @@ const enabledFeatureCount = computed(() => {
           <!-- Status Toggle Visual -->
           <div
             class="h-4 w-7 rounded-full transition-colors"
-            :class="feature.enabled ? 'bg-green-400' : 'bg-gray-200'"
+            :class="feature.enabled ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-600'"
           >
             <div
-              class="h-4 w-4 rounded-full bg-white shadow-sm transition-transform"
+              class="h-4 w-4 rounded-full bg-white dark:bg-gray-700 shadow-sm transition-transform"
               :class="feature.enabled ? 'translate-x-3' : 'translate-x-0'"
             />
           </div>
@@ -265,7 +265,7 @@ const enabledFeatureCount = computed(() => {
       class="flex flex-col items-center justify-center py-8 text-center"
     >
       <svg
-        class="mb-2 h-8 w-8 text-gray-300"
+        class="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -278,7 +278,7 @@ const enabledFeatureCount = computed(() => {
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
         />
       </svg>
-      <p class="text-sm text-pim-muted">Configure workflow preferences to see the diagram</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Configure workflow preferences to see the diagram</p>
     </div>
   </div>
 </template>

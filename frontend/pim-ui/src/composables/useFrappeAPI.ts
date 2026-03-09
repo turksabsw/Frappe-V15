@@ -113,7 +113,11 @@ function createFrappeAxios(): AxiosInstance {
       // If unauthorized, redirect to login
       if (error.response?.status === 401 || error.response?.status === 403) {
         const data = error.response.data as Record<string, unknown> | undefined
-        if (data?.session_expired || data?.exc_type === 'AuthenticationError') {
+        if (
+          data?.session_expired ||
+          data?.exc_type === 'AuthenticationError' ||
+          data?.exc_type === 'PermissionError'
+        ) {
           window.location.href = '/login'
           return Promise.reject(error)
         }

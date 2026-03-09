@@ -1,17 +1,9 @@
 <script setup lang="ts">
 /**
- * AppLayout - Main application layout component.
+ * AppLayout - Flowbite admin dashboard application shell.
  *
- * Combines Sidebar, TopBar, and main content area into a cohesive layout.
- * Supports both standard layout (sidebar + topbar + content) and blank layout
- * (full-screen content without chrome) for pages like the onboarding wizard.
- *
- * Features:
- * - Responsive sidebar with mobile overlay toggle
- * - Top bar with breadcrumbs, search, and user menu
- * - Main content area with max-width container
- * - Blank layout mode for full-screen views
- * - Sidebar state management via app store
+ * Based on Flowbite Admin Dashboard v2.2.0 layout pattern:
+ * fixed navbar (top) + fixed sidebar (left) + scrollable main content.
  */
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -28,6 +20,20 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const userName = ref('')
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/method/frappe.auth.get_logged_user', {
+      credentials: 'include',
+    })
+    const data = await res.json()
+    if (data.message) {
+      userName.value = data.message
+    }
+  } catch {
+    // ignore — user info is cosmetic
+  }
+})
 
 /** Whether current route uses blank layout (no sidebar/topbar) */
 const isBlankLayout = computed(() => route.meta.layout === 'blank')
@@ -77,7 +83,7 @@ const navItems = computed<SidebarNavItem[]>(() => [
   },
 ])
 
-/** Grouped PIM doctype links for sidebar (Products, Attributes, etc.) */
+/** Grouped PIM doctype links for sidebar */
 const navGroups = computed<SidebarNavGroup[]>(() =>
   PIM_NAV_GROUPS.map((g) => ({
     label: g.label,
@@ -103,42 +109,44 @@ function handleSearch(query: string): void {
 
 <template>
   <!-- Blank layout (for onboarding wizard, etc.) -->
-  <div v-if="isBlankLayout" class="min-h-screen bg-pim-bg">
+  <div v-if="isBlankLayout" class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <slot />
   </div>
 
-  <!-- Standard layout: sidebar fixed with own scroll, only main content scrolls -->
-  <div v-else class="flex h-screen overflow-hidden bg-pim-bg">
-    <!-- Sidebar (fixed on desktop, own scroll) -->
-    <Sidebar
-      :nav-items="navItems"
-      :nav-groups="navGroups"
-      :current-path="route.path"
-      :expanded="appStore.sidebarOpen"
+  <!-- Standard Flowbite dashboard layout: fixed navbar + fixed sidebar + scrollable main -->
+  <div v-else class="bg-gray-50 antialiased dark:bg-gray-900">
+    <!-- Fixed top navbar -->
+    <TopBar
+      :title="pageTitle"
+      :breadcrumbs="breadcrumbs"
+      :user-name="userName"
+      :show-search="true"
+      :show-sidebar-toggle="true"
+      @toggle-sidebar="handleToggleSidebar"
+      @search="handleSearch"
       @navigate="handleNavigate"
-      @close="appStore.sidebarOpen = false"
     />
 
-    <!-- Main area (topbar + content); ml-64 so content is beside fixed sidebar on lg -->
-    <div class="flex min-w-0 flex-1 flex-col overflow-hidden lg:ml-64">
-      <!-- Top bar -->
-      <TopBar
-        :title="pageTitle"
-        :breadcrumbs="breadcrumbs"
-        :user-name="userName"
-        :show-search="true"
-        :show-sidebar-toggle="true"
-        @toggle-sidebar="handleToggleSidebar"
-        @search="handleSearch"
+    <!-- Sidebar + main content wrapper (offset by navbar height) -->
+    <div class="flex overflow-hidden pt-16">
+      <!-- Fixed sidebar -->
+      <Sidebar
+        :nav-items="navItems"
+        :nav-groups="navGroups"
+        :current-path="route.path"
+        :expanded="appStore.sidebarOpen"
         @navigate="handleNavigate"
+        @close="appStore.sidebarOpen = false"
       />
 
-      <!-- Main content area (only this part scrolls) -->
-      <main class="min-h-0 flex-1 overflow-y-auto">
-        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <slot />
-        </div>
-      </main>
+      <!-- Main content area -->
+      <div id="main-content" :class="['relative h-full min-h-screen w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-[margin] duration-200 ease-in-out', appStore.sidebarCollapsed && !appStore.sidebarHovered ? 'lg:ms-16' : 'lg:ms-64']">
+        <main>
+          <div class="px-4 py-6 sm:px-6 lg:px-8">
+            <slot />
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 </template>

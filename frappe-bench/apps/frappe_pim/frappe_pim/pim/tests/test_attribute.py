@@ -379,8 +379,12 @@ class TestSelectTypeValidation(unittest.TestCase):
         self.assertIn("Blue", doc.options)
         self.assertIn("Green", doc.options)
 
-    def test_select_type_without_options_fails(self):
-        """Test that Select type requires options."""
+    def test_select_type_without_options_succeeds(self):
+        """Test that Select type can be created without inline options.
+
+        Options can be added later via PIM Attribute Option DocType,
+        so inline options are not required at creation time.
+        """
         import frappe
         from frappe.utils import random_string
 
@@ -391,11 +395,11 @@ class TestSelectTypeValidation(unittest.TestCase):
             "attribute_name": f"Test Select {random_string(4)}",
             "attribute_code": code,
             "data_type": "Select"
-            # No options provided
+            # No inline options - valid because options can come from PIM Attribute Option
         })
-
-        with self.assertRaises(frappe.exceptions.ValidationError):
-            doc.insert(ignore_permissions=True)
+        doc.insert(ignore_permissions=True)
+        self.track_document("PIM Attribute", doc.name)
+        self.assertEqual(doc.data_type, "Select")
 
     def test_multi_select_type_with_options(self):
         """Test Multi Select type with valid options."""
@@ -416,8 +420,12 @@ class TestSelectTypeValidation(unittest.TestCase):
 
         self.assertEqual(doc.data_type, "Multi Select")
 
-    def test_multi_select_type_without_options_fails(self):
-        """Test that Multi Select type requires options."""
+    def test_multi_select_type_without_options_succeeds(self):
+        """Test that Multi Select type can be created without inline options.
+
+        Options can be added later via PIM Attribute Option DocType,
+        so inline options are not required at creation time.
+        """
         import frappe
         from frappe.utils import random_string
 
@@ -428,11 +436,11 @@ class TestSelectTypeValidation(unittest.TestCase):
             "attribute_name": f"Test Multi Select {random_string(4)}",
             "attribute_code": code,
             "data_type": "Multi Select"
-            # No options provided
+            # No inline options - valid because options can come from PIM Attribute Option
         })
-
-        with self.assertRaises(frappe.exceptions.ValidationError):
-            doc.insert(ignore_permissions=True)
+        doc.insert(ignore_permissions=True)
+        self.track_document("PIM Attribute", doc.name)
+        self.assertEqual(doc.data_type, "Multi Select")
 
     def test_select_options_deduplication(self):
         """Test that duplicate options are rejected."""

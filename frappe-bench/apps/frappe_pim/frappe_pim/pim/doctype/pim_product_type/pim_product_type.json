@@ -79,11 +79,10 @@
       "label": "Allowed Families"
     },
     {
-      "fieldname": "allowed_families",
-      "fieldtype": "Table MultiSelect",
+      "fieldname": "allowed_families_text",
+      "fieldtype": "Small Text",
       "label": "Allowed Families",
-      "options": "Product Family",
-      "description": "Product families that can be associated with this product type"
+      "description": "Comma-separated list of allowed Product Family names. Leave empty to allow all families."
     }
   ],
 

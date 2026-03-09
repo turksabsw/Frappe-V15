@@ -35,14 +35,14 @@ const expandedNodes = ref<Set<string>>(new Set())
 
 /** Category source display metadata */
 const SOURCE_META: Record<string, { label: string; color: string }> = {
-  template: { label: 'From Template', color: 'bg-blue-50 text-blue-700' },
-  custom: { label: 'Custom Built', color: 'bg-green-50 text-green-700' },
-  import: { label: 'Imported', color: 'bg-amber-50 text-amber-700' },
-  gpc: { label: 'GPC Standard', color: 'bg-purple-50 text-purple-700' },
+  template: { label: 'From Template', color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
+  custom: { label: 'Custom Built', color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+  import: { label: 'Imported', color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  gpc: { label: 'GPC Standard', color: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' },
 }
 
 /** Default source metadata */
-const DEFAULT_SOURCE = { label: 'Unknown', color: 'bg-gray-50 text-gray-700' }
+const DEFAULT_SOURCE = { label: 'Unknown', color: 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-400' }
 
 /** Whether there is any taxonomy data to display */
 const hasContent = computed(() => {
@@ -82,17 +82,17 @@ function hasChildren(node: CategoryNode): boolean {
   <div class="space-y-4">
     <!-- Summary Stats -->
     <div v-if="hasContent" class="grid grid-cols-3 gap-2">
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ data.total_categories }}</p>
-        <p class="text-[10px] text-pim-muted">Categories</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Categories</p>
       </div>
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-indigo-600">{{ data.max_depth }}</p>
-        <p class="text-[10px] text-pim-muted">Max Depth</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Max Depth</p>
       </div>
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-teal-600">{{ data.brands.length }}</p>
-        <p class="text-[10px] text-pim-muted">Brands</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Brands</p>
       </div>
     </div>
 
@@ -110,9 +110,9 @@ function hasChildren(node: CategoryNode): boolean {
     </div>
 
     <!-- Category Tree -->
-    <div v-if="data.categories.length > 0" class="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div class="border-b border-gray-100 px-4 py-3">
-        <h4 class="text-xs font-medium uppercase tracking-wider text-pim-muted">
+    <div v-if="data.categories.length > 0" class="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 shadow-sm">
+      <div class="border-b border-gray-100 dark:border-gray-600 px-4 py-3">
+        <h4 class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Category Tree
         </h4>
       </div>
@@ -123,14 +123,14 @@ function hasChildren(node: CategoryNode): boolean {
           <div class="category-node">
             <!-- Node Row -->
             <button
-              class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50"
+              class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
               @click="hasChildren(node) ? toggleNode(node.name) : undefined"
               :class="{ 'cursor-default': !hasChildren(node) }"
             >
               <!-- Expand/Collapse Arrow -->
               <svg
                 v-if="hasChildren(node)"
-                class="h-3 w-3 flex-shrink-0 text-pim-muted transition-transform duration-200"
+                class="h-3 w-3 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-200"
                 :class="{ 'rotate-90': isExpanded(node.name) }"
                 fill="none"
                 stroke="currentColor"
@@ -164,14 +164,14 @@ function hasChildren(node: CategoryNode): boolean {
               </svg>
 
               <!-- Node Label -->
-              <span class="flex-1 truncate text-sm text-pim-text">
+              <span class="flex-1 truncate text-sm text-gray-900 dark:text-white">
                 {{ node.label }}
               </span>
 
               <!-- Children Count -->
               <span
                 v-if="hasChildren(node)"
-                class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-pim-muted"
+                class="rounded-full bg-gray-100 dark:bg-gray-600 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400"
               >
                 {{ node.children!.length }}
               </span>
@@ -183,13 +183,13 @@ function hasChildren(node: CategoryNode): boolean {
                 <template v-for="child in node.children" :key="child.name">
                   <div class="category-node">
                     <button
-                      class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50"
+                      class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
                       @click="hasChildren(child) ? toggleNode(child.name) : undefined"
                       :class="{ 'cursor-default': !hasChildren(child) }"
                     >
                       <svg
                         v-if="hasChildren(child)"
-                        class="h-3 w-3 flex-shrink-0 text-pim-muted transition-transform duration-200"
+                        class="h-3 w-3 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-200"
                         :class="{ 'rotate-90': isExpanded(child.name) }"
                         fill="none"
                         stroke="currentColor"
@@ -221,13 +221,13 @@ function hasChildren(node: CategoryNode): boolean {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                       </svg>
 
-                      <span class="flex-1 truncate text-xs text-pim-text">
+                      <span class="flex-1 truncate text-xs text-gray-900 dark:text-white">
                         {{ child.label }}
                       </span>
 
                       <span
                         v-if="hasChildren(child)"
-                        class="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-pim-muted"
+                        class="rounded-full bg-gray-100 dark:bg-gray-600 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400"
                       >
                         {{ child.children!.length }}
                       </span>
@@ -251,7 +251,7 @@ function hasChildren(node: CategoryNode): boolean {
                           >
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                           </svg>
-                          <span class="truncate text-xs text-pim-muted">
+                          <span class="truncate text-xs text-gray-500 dark:text-gray-400">
                             {{ leaf.label }}
                           </span>
                         </div>
@@ -267,15 +267,15 @@ function hasChildren(node: CategoryNode): boolean {
     </div>
 
     <!-- Brands -->
-    <div v-if="data.brands.length > 0" class="rounded-lg border border-gray-100 bg-white p-4">
-      <h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-pim-muted">
+    <div v-if="data.brands.length > 0" class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-4">
+      <h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Brands
       </h4>
       <div class="flex flex-wrap gap-1.5">
         <span
           v-for="brand in data.brands"
           :key="brand"
-          class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700"
+          class="inline-flex items-center rounded-full bg-teal-50 dark:bg-teal-900/30 px-2.5 py-1 text-xs font-medium text-teal-700 dark:text-teal-400"
         >
           {{ brand }}
         </span>
@@ -288,7 +288,7 @@ function hasChildren(node: CategoryNode): boolean {
       class="flex flex-col items-center justify-center py-8 text-center"
     >
       <svg
-        class="mb-2 h-8 w-8 text-gray-300"
+        class="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -301,7 +301,7 @@ function hasChildren(node: CategoryNode): boolean {
           d="M4 6h16M4 10h16M4 14h16M4 18h16"
         />
       </svg>
-      <p class="text-sm text-pim-muted">Configure taxonomy to see the category tree</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Configure taxonomy to see the category tree</p>
     </div>
   </div>
 </template>

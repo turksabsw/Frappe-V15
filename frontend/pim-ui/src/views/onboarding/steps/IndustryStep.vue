@@ -49,49 +49,49 @@ const INDUSTRY_SECTORS: readonly {
     label: 'Fashion & Apparel',
     description: 'Clothing, footwear, accessories with size/color variants',
     icon: '&#128087;',
-    color: 'bg-pink-50 border-pink-200 hover:border-pink-400',
+    color: 'bg-pink-50 dark:bg-pink-950 border-pink-200 dark:border-pink-800 hover:border-pink-400 dark:hover:border-pink-600',
   },
   {
     value: 'industrial',
     label: 'Industrial & Manufacturing',
     description: 'Parts, components, machinery with technical specifications',
     icon: '&#9881;',
-    color: 'bg-slate-50 border-slate-200 hover:border-slate-400',
+    color: 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600',
   },
   {
     value: 'food',
     label: 'Food & Beverage',
     description: 'Food products with nutritional data, allergens, expiry tracking',
     icon: '&#127828;',
-    color: 'bg-amber-50 border-amber-200 hover:border-amber-400',
+    color: 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 hover:border-amber-400 dark:hover:border-amber-600',
   },
   {
     value: 'electronics',
     label: 'Electronics & Technology',
     description: 'Gadgets, components, devices with detailed tech specs',
     icon: '&#128187;',
-    color: 'bg-cyan-50 border-cyan-200 hover:border-cyan-400',
+    color: 'bg-cyan-50 dark:bg-cyan-950 border-cyan-200 dark:border-cyan-800 hover:border-cyan-400 dark:hover:border-cyan-600',
   },
   {
     value: 'health_beauty',
     label: 'Health & Beauty',
     description: 'Cosmetics, skincare, supplements with ingredient tracking',
     icon: '&#128142;',
-    color: 'bg-purple-50 border-purple-200 hover:border-purple-400',
+    color: 'bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600',
   },
   {
     value: 'automotive',
     label: 'Automotive & Spare Parts',
     description: 'Vehicle parts, accessories with fitment and OE numbers',
     icon: '&#128663;',
-    color: 'bg-red-50 border-red-200 hover:border-red-400',
+    color: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 hover:border-red-400 dark:hover:border-red-600',
   },
   {
     value: 'custom',
     label: 'Custom / Other',
     description: 'Start with a blank slate and configure everything manually',
     icon: '&#128295;',
-    color: 'bg-gray-50 border-gray-200 hover:border-gray-400',
+    color: 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500',
   },
 ] as const
 
@@ -144,7 +144,7 @@ onMounted(async () => {
 /** Get display style for a sector card */
 function getSectorStyle(sector: IndustrySector): string {
   const sectorMeta = INDUSTRY_SECTORS.find((s) => s.value === sector)
-  const baseColor = sectorMeta?.color ?? 'bg-gray-50 border-gray-200 hover:border-gray-400'
+  const baseColor = sectorMeta?.color ?? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
   const selected = form.selected_industry === sector
     ? 'ring-2 ring-primary-500 border-primary-500'
     : ''
@@ -210,7 +210,7 @@ defineExpose({ isValid })
   <div class="space-y-6">
     <!-- Sector Selection Grid (7 cards) -->
     <div>
-      <label class="mb-3 block text-sm font-medium text-pim-text">
+      <label class="mb-3 block text-sm font-medium text-gray-900 dark:text-white">
         Select your industry profile <span class="text-red-500">*</span>
       </label>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -223,8 +223,8 @@ defineExpose({ isValid })
         >
           <span class="text-2xl" v-html="sector.icon" />
           <div class="flex-1">
-            <p class="font-medium text-pim-text">{{ sector.label }}</p>
-            <p class="mt-0.5 text-xs text-pim-muted">{{ sector.description }}</p>
+            <p class="font-medium text-gray-900 dark:text-white">{{ sector.label }}</p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ sector.description }}</p>
           </div>
           <div v-if="form.selected_industry === sector.value" class="flex-shrink-0">
             <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,27 +237,27 @@ defineExpose({ isValid })
 
     <!-- Custom Industry Name (shown when 'custom' selected) -->
     <div v-if="form.selected_industry === 'custom'">
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="custom_industry_name">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="custom_industry_name">
         Industry Name <span class="text-red-500">*</span>
       </label>
       <input
         id="custom_industry_name"
         v-model="form.custom_industry_name"
         type="text"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         placeholder="Describe your industry"
       />
     </div>
 
     <!-- Sub-Vertical (shown when sector has sub-verticals) -->
     <div v-if="getSubVerticals().length > 0">
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="industry_sub_vertical">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="industry_sub_vertical">
         Sub-Vertical
       </label>
       <select
         id="industry_sub_vertical"
         v-model="form.industry_sub_vertical"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option value="">Select a sub-vertical (optional)</option>
         <option
@@ -273,46 +273,46 @@ defineExpose({ isValid })
     <!-- Template Preview -->
     <div
       v-if="showPreview && store.templatePreview"
-      class="rounded-lg border border-pim-border bg-pim-surface p-4"
+      class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4"
     >
-      <h3 class="mb-2 text-sm font-medium text-pim-text">
+      <h3 class="mb-2 text-sm font-medium text-gray-900 dark:text-white">
         What this template creates:
       </h3>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">{{ store.templatePreview.attribute_count }}</p>
-          <p class="text-xs text-pim-muted">Attributes</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Attributes</p>
         </div>
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">{{ store.templatePreview.product_families.length }}</p>
-          <p class="text-xs text-pim-muted">Families</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Families</p>
         </div>
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">{{ store.templatePreview.attribute_groups.length }}</p>
-          <p class="text-xs text-pim-muted">Attribute Groups</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Attribute Groups</p>
         </div>
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">{{ store.templatePreview.default_channels.length }}</p>
-          <p class="text-xs text-pim-muted">Channels</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Channels</p>
         </div>
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">{{ store.templatePreview.demo_products }}</p>
-          <p class="text-xs text-pim-muted">Demo Products</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Demo Products</p>
         </div>
-        <div class="rounded-md bg-white p-2.5 text-center">
+        <div class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center">
           <p class="text-lg font-semibold text-primary-600">~{{ store.templatePreview.estimated_setup_minutes }}m</p>
-          <p class="text-xs text-pim-muted">Setup Time</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Setup Time</p>
         </div>
       </div>
 
       <!-- Product Families Preview -->
       <div v-if="store.templatePreview.product_families.length > 0" class="mt-3">
-        <p class="mb-1.5 text-xs font-medium text-pim-muted">Product Families:</p>
+        <p class="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Product Families:</p>
         <div class="flex flex-wrap gap-1.5">
           <span
             v-for="family in store.templatePreview.product_families"
             :key="family.name"
-            class="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs text-pim-text"
+            class="inline-flex items-center gap-1 rounded-full bg-white dark:bg-gray-700 px-2.5 py-1 text-xs text-gray-900 dark:text-white"
           >
             {{ family.label }}
             <span v-if="family.has_variants" class="text-primary-500" title="Has variants">&#8226;</span>
@@ -324,19 +324,19 @@ defineExpose({ isValid })
     <!-- Legacy Archetype Preview (fallback when new preview is unavailable) -->
     <div
       v-else-if="showPreview && store.archetypePreview"
-      class="rounded-lg border border-pim-border bg-pim-surface p-4"
+      class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4"
     >
-      <h3 class="mb-2 text-sm font-medium text-pim-text">
+      <h3 class="mb-2 text-sm font-medium text-gray-900 dark:text-white">
         What this template creates:
       </h3>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <div
           v-for="(section, key) in store.archetypePreview.sections"
           :key="key"
-          class="rounded-md bg-white p-2.5 text-center"
+          class="rounded-md bg-white dark:bg-gray-700 p-2.5 text-center"
         >
           <p class="text-lg font-semibold text-primary-600">{{ section.count }}</p>
-          <p class="text-xs text-pim-muted capitalize">{{ String(key).replace(/_/g, ' ') }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">{{ String(key).replace(/_/g, ' ') }}</p>
         </div>
       </div>
     </div>

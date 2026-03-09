@@ -27,7 +27,10 @@ Note: frappe imports are deferred to function level to allow module
 import without Frappe being available (e.g., for testing/verification).
 """
 
+import frappe
 
+
+@frappe.whitelist()
 def start_onboarding(user=None):
     """Start or resume onboarding for a user.
 
@@ -78,16 +81,27 @@ def start_onboarding(user=None):
         doc = frappe.new_doc("PIM Onboarding State")
         doc.user = user
         doc.current_step = "pending"
+        doc.flags.ignore_links = True
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
 
     # If still at pending, advance to company_info to start
-    if doc.current_step == "pending":
-        doc.advance_step()
+    try:
+        if doc.current_step == "pending":
+            doc.advance_step()
+        return doc.get_status_summary()
+    except frappe.ValidationError as e:
+        return {
+            "user": user,
+            "current_step": doc.current_step,
+            "is_completed": False,
+            "is_skipped": False,
+            "progress_percent": 0,
+            "error": str(e),
+        }
 
-    return doc.get_status_summary()
 
-
+@frappe.whitelist()
 def get_onboarding_state(user=None):
     """Get the current onboarding state for a user.
 
@@ -148,6 +162,7 @@ def get_onboarding_state(user=None):
     return summary
 
 
+@frappe.whitelist()
 def save_step_data(step, form_data, user=None, advance=False):
     """Save form data for a specific onboarding step.
 
@@ -185,41 +200,32 @@ def save_step_data(step, form_data, user=None, advance=False):
     # Find onboarding state
     existing = frappe.db.exists("PIM Onboarding State", {"user": user})
     if not existing:
-        frappe.throw(
-            _("No onboarding state found for user {0}. Call start_onboarding first.").format(user),
-            title=_("Not Found")
-        )
+        return {"current_step": "pending", "is_completed": False, "error": _("No onboarding state. Start onboarding first.")}
 
     doc = frappe.get_doc("PIM Onboarding State", existing)
 
-    # Parse form_data if it's a JSON string
+    # Parse form_data if it's a JSON string (avoid 417)
     if isinstance(form_data, str):
         try:
             parsed_data = json.loads(form_data)
         except (json.JSONDecodeError, TypeError):
-            frappe.throw(
-                _("Invalid form_data: must be valid JSON"),
-                title=_("Invalid Data")
-            )
+            return {"current_step": doc.current_step, "is_completed": False, "error": _("Invalid form_data: must be valid JSON")}
     else:
         parsed_data = form_data
 
     if not isinstance(parsed_data, dict):
-        frappe.throw(
-            _("form_data must be a JSON object (dict)"),
-            title=_("Invalid Data")
-        )
+        return {"current_step": doc.current_step, "is_completed": False, "error": _("form_data must be a JSON object (dict)")}
 
-    # Save step data
-    doc.save_step_data(step, parsed_data)
-
-    # Optionally advance to next step
-    if advance:
-        doc.advance_step()
-
-    return doc.get_status_summary()
+    try:
+        doc.save_step_data(step, parsed_data)
+        if advance:
+            doc.advance_step()
+        return doc.get_status_summary()
+    except frappe.ValidationError as e:
+        return {"current_step": doc.current_step, "is_completed": False, "error": str(e)}
 
 
+@frappe.whitelist()
 def apply_archetype_template(archetype, user=None, dry_run=False):
     """Apply an industry archetype template to configure PIM.
 
@@ -309,6 +315,7 @@ def apply_archetype_template(archetype, user=None, dry_run=False):
     }
 
 
+@frappe.whitelist()
 def complete_onboarding(user=None, form_data=None):
     """Advance the onboarding wizard to the next step, or complete it.
 
@@ -372,6 +379,7 @@ def complete_onboarding(user=None, form_data=None):
     return doc.get_status_summary()
 
 
+@frappe.whitelist()
 def get_available_archetypes():
     """Get list of available industry archetype templates.
 
@@ -412,6 +420,7 @@ def get_available_archetypes():
     }
 
 
+@frappe.whitelist()
 def skip_onboarding(user=None):
     """Skip the onboarding wizard entirely.
 
@@ -450,6 +459,7 @@ def skip_onboarding(user=None):
     return doc.get_status_summary()
 
 
+@frappe.whitelist()
 def reset_onboarding(user=None):
     """Reset onboarding to initial state.
 
@@ -489,6 +499,7 @@ def reset_onboarding(user=None):
     return doc.get_status_summary()
 
 
+@frappe.whitelist()
 def preview_archetype(archetype):
     """Preview what an archetype template will create without applying it.
 
@@ -538,6 +549,28 @@ def preview_archetype(archetype):
 # ============================================================================
 
 
+def _default_onboarding_steps_response(current_step: int = 1):
+    """Return a minimal step list so the UI can render when status API fails."""
+    step_ids = (
+        "company_info", "industry_selection", "product_structure", "attribute_config",
+        "taxonomy", "channel_setup", "localization", "workflow_preferences",
+        "quality_scoring", "integrations", "compliance", "summary_launch",
+    )
+    return [
+        {
+            "step_id": step_id,
+            "step_number": idx + 1,
+            "is_completed": False,
+            "is_current": (idx + 1) == current_step,
+            "is_skippable": idx + 1 in (9, 10, 11),
+            "is_mandatory": idx + 1 not in (9, 10, 11) and idx + 1 != 12,
+            "was_skipped": False,
+        }
+        for idx, step_id in enumerate(step_ids)
+    ]
+
+
+@frappe.whitelist()
 def get_onboarding_status():
     """Get the combined onboarding status from Tenant Config and state.
 
@@ -572,11 +605,38 @@ def get_onboarding_status():
     if not frappe.has_permission("PIM Onboarding State", "read"):
         frappe.throw(_("Not permitted to access onboarding status"), frappe.PermissionError)
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.get_status()
+    except frappe.ValidationError as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "current_step": 0,
+            "total_steps": 12,
+            "completed_steps": [],
+            "can_skip_remaining": False,
+            "steps": _default_onboarding_steps_response(1),
+            "progress_percent": 0.0,
+        }
+    except Exception as e:
+        frappe.log_error(
+            title="PIM get_onboarding_status failed",
+            message=frappe.get_traceback(),
+        )
+        return {
+            "status": "error",
+            "message": str(e),
+            "current_step": 1,
+            "total_steps": 12,
+            "completed_steps": [],
+            "can_skip_remaining": False,
+            "steps": _default_onboarding_steps_response(1),
+            "progress_percent": 0.0,
+        }
 
-    return OnboardingService.get_status()
 
-
+@frappe.whitelist()
 def save_step(step_id, step_number, form_data, advance=False):
     """Save form data for a specific onboarding step with dual-write.
 
@@ -624,38 +684,56 @@ def save_step(step_id, step_number, form_data, advance=False):
         try:
             parsed_data = json.loads(form_data)
         except (json.JSONDecodeError, TypeError):
-            frappe.throw(
-                _("Invalid form_data: must be valid JSON"),
-                title=_("Invalid Data")
-            )
+            return {
+                "success": False,
+                "step_id": step_id,
+                "step_number": step_number,
+                "validation_errors": [_("Invalid form_data: must be valid JSON")],
+                "message": _("Invalid form_data: must be valid JSON"),
+            }
     else:
         parsed_data = form_data
 
     if not isinstance(parsed_data, dict):
-        frappe.throw(
-            _("form_data must be a JSON object (dict)"),
-            title=_("Invalid Data")
-        )
+        return {
+            "success": False,
+            "step_id": step_id,
+            "step_number": step_number,
+            "validation_errors": [_("form_data must be a JSON object (dict)")],
+            "message": _("form_data must be a JSON object (dict)"),
+        }
 
     # Coerce step_number to int (Frappe API may pass string)
     try:
         step_number = int(step_number)
     except (TypeError, ValueError):
-        frappe.throw(
-            _("step_number must be an integer (1-12)"),
-            title=_("Invalid Data")
+        return {
+            "success": False,
+            "step_id": step_id,
+            "step_number": step_number,
+            "validation_errors": [_("step_number must be an integer (1-12)")],
+            "message": _("step_number must be an integer (1-12)"),
+        }
+
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.save_step(
+            step_id=step_id,
+            step_number=step_number,
+            form_data=parsed_data,
+            advance=bool(advance),
         )
+    except frappe.ValidationError as e:
+        return {
+            "success": False,
+            "step_id": step_id,
+            "step_number": step_number,
+            "validation_errors": [str(e)],
+            "message": str(e),
+        }
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
 
-    return OnboardingService.save_step(
-        step_id=step_id,
-        step_number=step_number,
-        form_data=parsed_data,
-        advance=bool(advance),
-    )
-
-
+@frappe.whitelist()
 def skip_step(step_id, step_number):
     """Skip an individual onboarding step.
 
@@ -692,19 +770,31 @@ def skip_step(step_id, step_number):
     try:
         step_number = int(step_number)
     except (TypeError, ValueError):
-        frappe.throw(
-            _("step_number must be an integer"),
-            title=_("Invalid Data")
+        return {
+            "success": False,
+            "step_id": step_id,
+            "step_number": step_number,
+            "validation_errors": [_("step_number must be an integer")],
+            "message": _("step_number must be an integer"),
+        }
+
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.skip_step(
+            step_id=step_id,
+            step_number=step_number,
         )
+    except frappe.ValidationError as e:
+        return {
+            "success": False,
+            "step_id": step_id,
+            "step_number": step_number,
+            "validation_errors": [str(e)],
+            "message": str(e),
+        }
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
 
-    return OnboardingService.skip_step(
-        step_id=step_id,
-        step_number=step_number,
-    )
-
-
+@frappe.whitelist()
 def get_template_preview(industry=None):
     """Preview what an industry template will create.
 
@@ -747,11 +837,21 @@ def get_template_preview(industry=None):
     if not frappe.has_permission("PIM Onboarding State", "read"):
         frappe.throw(_("Not permitted to preview templates"), frappe.PermissionError)
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.get_template_preview(industry=industry)
+    except frappe.ValidationError as e:
+        return {
+            "display_name": "",
+            "attribute_count": 0,
+            "attribute_groups": [],
+            "product_families": [],
+            "default_channels": [],
+            "error": str(e),
+        }
 
-    return OnboardingService.get_template_preview(industry=industry)
 
-
+@frappe.whitelist()
 def apply_template(create_demo_products=False):
     """Apply the industry template based on Tenant Config selection.
 
@@ -785,13 +885,22 @@ def apply_template(create_demo_products=False):
     if not frappe.has_permission("PIM Onboarding State", "write"):
         frappe.throw(_("Not permitted to apply templates"), frappe.PermissionError)
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.apply_template(
+            create_demo_products=bool(create_demo_products),
+        )
+    except frappe.ValidationError as e:
+        return {
+            "success": False,
+            "status": "failed",
+            "errors": [str(e)],
+            "message": str(e),
+            "redirect_to": None,
+        }
 
-    return OnboardingService.apply_template(
-        create_demo_products=bool(create_demo_products),
-    )
 
-
+@frappe.whitelist()
 def v2_complete_onboarding(form_data=None):
     """Complete the onboarding wizard with Tenant Config update.
 
@@ -829,25 +938,37 @@ def v2_complete_onboarding(form_data=None):
     if not frappe.has_permission("PIM Onboarding State", "write"):
         frappe.throw(_("Not permitted to complete onboarding"), frappe.PermissionError)
 
-    # Parse form_data if it's a JSON string
+    # Parse form_data if it's a JSON string (avoid 417: return error dict instead of throw)
     parsed_data = None
     if form_data:
         if isinstance(form_data, str):
             try:
                 parsed_data = json.loads(form_data)
             except (json.JSONDecodeError, TypeError):
-                frappe.throw(
-                    _("Invalid form_data: must be valid JSON"),
-                    title=_("Invalid Data")
-                )
+                return {
+                    "success": False,
+                    "status": "failed",
+                    "errors": [_("Invalid form_data: must be valid JSON")],
+                    "message": _("Invalid form_data: must be valid JSON"),
+                    "redirect_to": None,
+                }
         else:
             parsed_data = form_data
 
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.complete_onboarding(form_data=parsed_data)
+    except frappe.ValidationError as e:
+        return {
+            "success": False,
+            "status": "failed",
+            "errors": [str(e)],
+            "message": str(e),
+            "redirect_to": None,
+        }
 
-    return OnboardingService.complete_onboarding(form_data=parsed_data)
 
-
+@frappe.whitelist()
 def update_post_onboarding(section, form_data):
     """Update tenant configuration after onboarding completion.
 
@@ -901,58 +1022,25 @@ def update_post_onboarding(section, form_data):
         parsed_data = form_data
 
     if not isinstance(parsed_data, dict):
-        frappe.throw(
-            _("form_data must be a JSON object (dict)"),
-            title=_("Invalid Data")
+        return {
+            "success": False,
+            "updated_fields": [],
+            "impact_warning": None,
+            "message": _("form_data must be a JSON object (dict)"),
+        }
+
+    try:
+        from frappe_pim.pim.services.onboarding_service import OnboardingService
+        return OnboardingService.update_post_onboarding(
+            section=section,
+            form_data=parsed_data,
         )
-
-    from frappe_pim.pim.services.onboarding_service import OnboardingService
-
-    return OnboardingService.update_post_onboarding(
-        section=section,
-        form_data=parsed_data,
-    )
-
-
-# ============================================================================
-# Whitelist Wrapper
-# ============================================================================
-
-def _wrap_for_whitelist():
-    """Add @frappe.whitelist() decorators at runtime."""
-    import frappe
-
-    # Legacy endpoints (backward compatible)
-    global start_onboarding, get_onboarding_state, save_step_data
-    global apply_archetype_template, complete_onboarding, get_available_archetypes
-    global skip_onboarding, reset_onboarding, preview_archetype
-
-    start_onboarding = frappe.whitelist()(start_onboarding)
-    get_onboarding_state = frappe.whitelist()(get_onboarding_state)
-    save_step_data = frappe.whitelist()(save_step_data)
-    apply_archetype_template = frappe.whitelist()(apply_archetype_template)
-    complete_onboarding = frappe.whitelist()(complete_onboarding)
-    get_available_archetypes = frappe.whitelist()(get_available_archetypes)
-    skip_onboarding = frappe.whitelist()(skip_onboarding)
-    reset_onboarding = frappe.whitelist()(reset_onboarding)
-    preview_archetype = frappe.whitelist()(preview_archetype)
-
-    # New endpoints (Tenant Config + OnboardingService pattern)
-    global get_onboarding_status, save_step, skip_step
-    global get_template_preview, apply_template
-    global v2_complete_onboarding, update_post_onboarding
-
-    get_onboarding_status = frappe.whitelist()(get_onboarding_status)
-    save_step = frappe.whitelist()(save_step)
-    skip_step = frappe.whitelist()(skip_step)
-    get_template_preview = frappe.whitelist()(get_template_preview)
-    apply_template = frappe.whitelist()(apply_template)
-    v2_complete_onboarding = frappe.whitelist()(v2_complete_onboarding)
-    update_post_onboarding = frappe.whitelist()(update_post_onboarding)
+    except frappe.ValidationError as e:
+        return {
+            "success": False,
+            "updated_fields": [],
+            "impact_warning": None,
+            "message": str(e),
+        }
 
 
-# Apply whitelist decorators if frappe is available
-try:
-    _wrap_for_whitelist()
-except ImportError:
-    pass  # Decorators will be added when module is used in Frappe context

@@ -176,14 +176,14 @@ function handleSubmit(): void {
   <div class="space-y-6">
     <!-- Quality Threshold Slider -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="quality_threshold">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="quality_threshold">
         Minimum Quality Threshold
       </label>
-      <p class="mb-3 text-xs text-pim-muted">
+      <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
         Products must reach this score before they can be published.
         A higher threshold enforces stricter data quality standards.
       </p>
-      <div class="rounded-lg border border-pim-border p-4">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
         <div class="flex items-center justify-between">
           <span class="text-2xl font-bold text-primary-600">
             {{ form.quality_threshold }}%
@@ -191,11 +191,11 @@ function handleSubmit(): void {
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="{
-              'bg-red-100 text-red-700': (form.quality_threshold ?? 0) < 30,
-              'bg-orange-100 text-orange-700': (form.quality_threshold ?? 0) >= 30 && (form.quality_threshold ?? 0) < 50,
-              'bg-yellow-100 text-yellow-700': (form.quality_threshold ?? 0) >= 50 && (form.quality_threshold ?? 0) < 70,
-              'bg-green-100 text-green-700': (form.quality_threshold ?? 0) >= 70 && (form.quality_threshold ?? 0) < 90,
-              'bg-blue-100 text-blue-700': (form.quality_threshold ?? 0) >= 90,
+              'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400': (form.quality_threshold ?? 0) < 30,
+              'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400': (form.quality_threshold ?? 0) >= 30 && (form.quality_threshold ?? 0) < 50,
+              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400': (form.quality_threshold ?? 0) >= 50 && (form.quality_threshold ?? 0) < 70,
+              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400': (form.quality_threshold ?? 0) >= 70 && (form.quality_threshold ?? 0) < 90,
+              'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400': (form.quality_threshold ?? 0) >= 90,
             }"
           >
             {{ thresholdLabel }}
@@ -210,7 +210,7 @@ function handleSubmit(): void {
           step="5"
           class="mt-3 h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-primary-600"
         />
-        <div class="mt-1 flex justify-between text-xs text-pim-muted">
+        <div class="mt-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
           <span>0%</span>
           <span>50%</span>
           <span>100%</span>
@@ -222,16 +222,16 @@ function handleSubmit(): void {
     <div>
       <div class="mb-3 flex items-center justify-between">
         <div>
-          <label class="block text-sm font-medium text-pim-text">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white">
             Scoring Dimension Weights
           </label>
-          <p class="mt-0.5 text-xs text-pim-muted">
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Adjust how much each dimension contributes to the overall quality score.
             Weights should sum to 100.
           </p>
         </div>
         <button
-          class="rounded-md border border-pim-border px-2.5 py-1 text-xs text-pim-muted transition-colors hover:border-gray-300 hover:text-pim-text"
+          class="rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs text-gray-500 dark:text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-900 dark:text-white"
           @click="resetWeights"
         >
           Reset Defaults
@@ -242,18 +242,18 @@ function handleSubmit(): void {
         <div
           v-for="dimension in SCORING_DIMENSIONS"
           :key="dimension.key"
-          class="rounded-lg border border-pim-border p-3"
+          class="rounded-lg border border-gray-300 dark:border-gray-600 p-3"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <div class="h-3 w-3 rounded-full" :class="dimension.color" />
-              <span class="text-sm font-medium text-pim-text">{{ dimension.label }}</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ dimension.label }}</span>
             </div>
             <span class="text-sm font-medium text-primary-600">
               {{ form.scoring_weights?.[dimension.key] ?? 0 }}%
             </span>
           </div>
-          <p class="mb-2 mt-1 text-xs text-pim-muted">{{ dimension.description }}</p>
+          <p class="mb-2 mt-1 text-xs text-gray-500 dark:text-gray-400">{{ dimension.description }}</p>
           <input
             v-model.number="form.scoring_weights![dimension.key]"
             type="range"
@@ -268,13 +268,13 @@ function handleSubmit(): void {
       <!-- Weight Total -->
       <div
         class="mt-3 flex items-center justify-between rounded-lg p-3"
-        :class="weightsBalanced ? 'bg-green-50' : 'bg-amber-50'"
+        :class="weightsBalanced ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-950'"
       >
-        <span class="text-sm font-medium" :class="weightsBalanced ? 'text-green-700' : 'text-amber-700'">
+        <span class="text-sm font-medium" :class="weightsBalanced ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'">
           Total Weight
         </span>
         <div class="flex items-center gap-2">
-          <span class="text-sm font-bold" :class="weightsBalanced ? 'text-green-700' : 'text-amber-700'">
+          <span class="text-sm font-bold" :class="weightsBalanced ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'">
             {{ totalWeight }}%
           </span>
           <svg
@@ -286,17 +286,17 @@ function handleSubmit(): void {
           >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span v-else class="text-xs text-amber-600">(should be 100%)</span>
+          <span v-else class="text-xs text-amber-600 dark:text-amber-400">(should be 100%)</span>
         </div>
       </div>
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         This step is optional. You can skip it to use default scoring settings.
         Quality scoring can be fine-tuned later in PIM Settings.
       </p>

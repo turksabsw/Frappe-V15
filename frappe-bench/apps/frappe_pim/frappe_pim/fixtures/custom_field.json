@@ -57,6 +57,16 @@
         "module": "PIM"
     },
     {
+        "name": "Item-custom_pim_workflow_state",
+        "doctype": "Custom Field",
+        "dt": "Item",
+        "fieldname": "custom_pim_workflow_state",
+        "fieldtype": "Data",
+        "label": "PIM Workflow State",
+        "insert_after": "custom_pim_lifecycle_stage",
+        "module": "PIM"
+    },
+    {
         "name": "Item-custom_pim_column_break_1",
         "doctype": "Custom Field",
         "dt": "Item",

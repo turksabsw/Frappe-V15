@@ -35,25 +35,25 @@ const expandedGroups = ref<Set<string>>(new Set())
 
 /** Attribute type display metadata */
 const TYPE_BADGES: Record<string, { label: string; color: string }> = {
-  text: { label: 'Text', color: 'bg-blue-50 text-blue-700' },
-  textarea: { label: 'Text Area', color: 'bg-blue-50 text-blue-700' },
-  number: { label: 'Number', color: 'bg-green-50 text-green-700' },
-  decimal: { label: 'Decimal', color: 'bg-green-50 text-green-700' },
-  select: { label: 'Select', color: 'bg-purple-50 text-purple-700' },
-  multiselect: { label: 'Multi-Select', color: 'bg-purple-50 text-purple-700' },
-  boolean: { label: 'Yes/No', color: 'bg-amber-50 text-amber-700' },
-  date: { label: 'Date', color: 'bg-cyan-50 text-cyan-700' },
-  datetime: { label: 'DateTime', color: 'bg-cyan-50 text-cyan-700' },
-  image: { label: 'Image', color: 'bg-pink-50 text-pink-700' },
-  file: { label: 'File', color: 'bg-pink-50 text-pink-700' },
-  link: { label: 'Link', color: 'bg-indigo-50 text-indigo-700' },
-  json: { label: 'JSON', color: 'bg-slate-50 text-slate-700' },
-  html: { label: 'HTML', color: 'bg-orange-50 text-orange-700' },
-  measurement: { label: 'Measurement', color: 'bg-teal-50 text-teal-700' },
+  text: { label: 'Text', color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
+  textarea: { label: 'Text Area', color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
+  number: { label: 'Number', color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+  decimal: { label: 'Decimal', color: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+  select: { label: 'Select', color: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' },
+  multiselect: { label: 'Multi-Select', color: 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' },
+  boolean: { label: 'Yes/No', color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  date: { label: 'Date', color: 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400' },
+  datetime: { label: 'DateTime', color: 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400' },
+  image: { label: 'Image', color: 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' },
+  file: { label: 'File', color: 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' },
+  link: { label: 'Link', color: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' },
+  json: { label: 'JSON', color: 'bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400' },
+  html: { label: 'HTML', color: 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' },
+  measurement: { label: 'Measurement', color: 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400' },
 }
 
 /** Default type badge for unknown types */
-const DEFAULT_TYPE_BADGE = { label: 'Unknown', color: 'bg-gray-50 text-gray-700' }
+const DEFAULT_TYPE_BADGE = { label: 'Unknown', color: 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-400' }
 
 /** Whether any attribute data is available */
 const hasContent = computed(() => {
@@ -88,33 +88,33 @@ function getTypeBadge(type: string): { label: string; color: string } {
   <div class="space-y-4">
     <!-- Summary Counts -->
     <div v-if="hasContent" class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ data.total_attributes }}</p>
-        <p class="text-[10px] text-pim-muted">Total</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Total</p>
       </div>
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-blue-600">{{ data.template_count }}</p>
-        <p class="text-[10px] text-pim-muted">Template</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Template</p>
       </div>
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-green-600">{{ data.custom_count }}</p>
-        <p class="text-[10px] text-pim-muted">Custom</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Custom</p>
       </div>
-      <div class="rounded-lg border border-gray-100 bg-white p-3 text-center">
+      <div class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-3 text-center">
         <p class="text-lg font-semibold text-red-500">{{ data.removed_count }}</p>
-        <p class="text-[10px] text-pim-muted">Removed</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Removed</p>
       </div>
     </div>
 
     <!-- Attribute Group Tree -->
-    <div v-if="data.groups.length > 0" class="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div class="border-b border-gray-100 px-4 py-3">
-        <h4 class="text-xs font-medium uppercase tracking-wider text-pim-muted">
+    <div v-if="data.groups.length > 0" class="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 shadow-sm">
+      <div class="border-b border-gray-100 dark:border-gray-600 px-4 py-3">
+        <h4 class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Attribute Groups
         </h4>
       </div>
 
-      <div class="divide-y divide-gray-50">
+      <div class="divide-y divide-gray-50 dark:divide-gray-600">
         <div
           v-for="group in data.groups"
           :key="group.name"
@@ -122,12 +122,12 @@ function getTypeBadge(type: string): { label: string; color: string } {
         >
           <!-- Group Header (clickable) -->
           <button
-            class="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
             @click="toggleGroup(group.name)"
           >
             <!-- Expand/Collapse Arrow -->
             <svg
-              class="h-3.5 w-3.5 flex-shrink-0 text-pim-muted transition-transform duration-200"
+              class="h-3.5 w-3.5 flex-shrink-0 text-gray-500 dark:text-gray-400 transition-transform duration-200"
               :class="{ 'rotate-90': isExpanded(group.name) }"
               fill="none"
               stroke="currentColor"
@@ -143,19 +143,19 @@ function getTypeBadge(type: string): { label: string; color: string } {
             </svg>
 
             <!-- Group Label -->
-            <span class="flex-1 text-sm font-medium text-pim-text">
+            <span class="flex-1 text-sm font-medium text-gray-900 dark:text-white">
               {{ group.label }}
             </span>
 
             <!-- Attribute Count Badge -->
-            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-pim-muted">
+            <span class="rounded-full bg-gray-100 dark:bg-gray-600 px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400">
               {{ group.attributes.length }}
             </span>
           </button>
 
           <!-- Expanded: Attribute List -->
           <Transition name="expand">
-            <div v-if="isExpanded(group.name)" class="border-t border-gray-50 bg-gray-50/50 px-4 py-2">
+            <div v-if="isExpanded(group.name)" class="border-t border-gray-50 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 px-4 py-2">
               <div class="space-y-1.5 pl-6">
                 <div
                   v-for="attr in group.attributes"
@@ -187,7 +187,7 @@ function getTypeBadge(type: string): { label: string; color: string } {
                   </svg>
 
                   <!-- Attribute Label -->
-                  <span class="flex-1 truncate text-xs text-pim-text">
+                  <span class="flex-1 truncate text-xs text-gray-900 dark:text-white">
                     {{ attr.label }}
                   </span>
 
@@ -207,7 +207,7 @@ function getTypeBadge(type: string): { label: string; color: string } {
     </div>
 
     <!-- Legend -->
-    <div v-if="hasContent" class="flex items-center justify-center gap-4 text-[10px] text-pim-muted">
+    <div v-if="hasContent" class="flex items-center justify-center gap-4 text-[10px] text-gray-500 dark:text-gray-400">
       <span class="flex items-center gap-1">
         <span class="inline-block h-2 w-2 rounded-full bg-blue-400" />
         Template
@@ -228,7 +228,7 @@ function getTypeBadge(type: string): { label: string; color: string } {
       class="flex flex-col items-center justify-center py-8 text-center"
     >
       <svg
-        class="mb-2 h-8 w-8 text-gray-300"
+        class="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -241,7 +241,7 @@ function getTypeBadge(type: string): { label: string; color: string } {
           d="M4 6h16M4 10h16M4 14h16M4 18h16"
         />
       </svg>
-      <p class="text-sm text-pim-muted">Configure attributes to see the tree view</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Configure attributes to see the tree view</p>
     </div>
   </div>
 </template>

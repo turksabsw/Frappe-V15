@@ -89,6 +89,7 @@ class TestOnboardingStepLog(FrappeTestCase):
         for key, value in kwargs.items():
             doc.set(key, value)
 
+        doc.flags.ignore_links = True
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
         return doc
@@ -324,6 +325,7 @@ class TestOnboardingStepLog(FrappeTestCase):
         doc.action = "completed"
         doc.started_at = started
         doc.completed_at = completed
+        doc.flags.ignore_links = True
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
 
@@ -342,6 +344,7 @@ class TestOnboardingStepLog(FrappeTestCase):
         doc.started_at = started
         doc.completed_at = completed
         doc.time_spent_seconds = 45  # Manually set different value
+        doc.flags.ignore_links = True
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
 

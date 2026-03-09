@@ -651,7 +651,7 @@ class TestE2ECompletenessScore(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"e2e_attr_{suffix}",
             "attribute_name": f"E2E Attribute {suffix}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
@@ -660,11 +660,11 @@ class TestE2ECompletenessScore(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"E2E Family {suffix}",
-            "family_code": f"e2e-fam-{suffix}",
+            "family_code": f"e2efam{suffix}",
             "is_group": 0,
-            "attribute_templates": [{
+            "attributes": [{
                 "attribute": attr.name,
-                "is_required": 1
+                "is_required_in_family": 1
             }]
         })
         family.insert(ignore_permissions=True)

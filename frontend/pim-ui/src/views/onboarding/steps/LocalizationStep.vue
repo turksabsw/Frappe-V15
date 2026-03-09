@@ -180,13 +180,13 @@ function handleSubmit(): void {
   <div class="space-y-6">
     <!-- Primary Language -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="primary_language">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="primary_language">
         Primary Language
       </label>
       <select
         id="primary_language"
         v-model="form.primary_language"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option
           v-for="lang in LANGUAGES"
@@ -196,17 +196,17 @@ function handleSubmit(): void {
           {{ lang.label }}
         </option>
       </select>
-      <p class="mt-1 text-xs text-pim-muted">
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
         The default language for product content and interface.
       </p>
     </div>
 
     <!-- Additional Languages -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Additional Languages
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         Select additional languages for translated product content.
       </p>
       <div class="flex flex-wrap gap-2">
@@ -216,8 +216,8 @@ function handleSubmit(): void {
           class="rounded-full border px-3 py-1.5 text-sm transition-all duration-200"
           :class="
             isLanguageSelected(lang.value)
-              ? 'border-primary-500 bg-primary-50 text-primary-700'
-              : 'border-pim-border text-pim-muted hover:border-gray-300'
+              ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/20 dark:text-primary-400'
+              : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
           "
           @click="toggleAdditionalLanguage(lang.value)"
         >
@@ -227,19 +227,19 @@ function handleSubmit(): void {
     </div>
 
     <!-- Auto-Translate Toggle -->
-    <div v-if="hasAdditionalLanguages" class="rounded-lg border border-pim-border p-4">
+    <div v-if="hasAdditionalLanguages" class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
       <div class="flex items-start gap-3">
         <input
           id="enable_auto_translate"
           v-model="form.enable_auto_translate"
           type="checkbox"
-          class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+          class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
         />
         <div class="flex-1">
-          <label class="block text-sm font-medium text-pim-text" for="enable_auto_translate">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white" for="enable_auto_translate">
             Enable AI Auto-Translation
           </label>
-          <p class="mt-0.5 text-xs text-pim-muted">
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Automatically translate product titles, descriptions, and attributes
             to selected languages using AI. Translations can be reviewed and edited.
           </p>
@@ -251,13 +251,13 @@ function handleSubmit(): void {
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <!-- Default Currency -->
       <div>
-        <label class="mb-1.5 block text-sm font-medium text-pim-text" for="default_currency">
+        <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="default_currency">
           Default Currency
         </label>
         <select
           id="default_currency"
           v-model="form.default_currency"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         >
           <option
             v-for="currency in CURRENCIES"
@@ -271,13 +271,13 @@ function handleSubmit(): void {
 
       <!-- Default UOM -->
       <div>
-        <label class="mb-1.5 block text-sm font-medium text-pim-text" for="default_uom">
+        <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="default_uom">
           Default Unit of Measure
         </label>
         <select
           id="default_uom"
           v-model="form.default_uom"
-          class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         >
           <option
             v-for="uom in UOMS"
@@ -291,11 +291,11 @@ function handleSubmit(): void {
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         Language and currency settings can be updated anytime in PIM Settings.
         Additional languages enable multi-language product content for different markets.
       </p>

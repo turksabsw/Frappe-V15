@@ -62,7 +62,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Pricing & Packaging',
-    icon: 'doc',
+    icon: 'pricing',
     items: [
       { label: 'Price Rule', doctype: 'Price Rule', path: docPath('Price Rule') },
       { label: 'PIM Contract Price', doctype: 'PIM Contract Price', path: docPath('PIM Contract Price') },
@@ -74,7 +74,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Templates & Export',
-    icon: 'doc',
+    icon: 'templates',
     items: [
       { label: 'Display Template', doctype: 'Display Template', path: docPath('Display Template') },
       { label: 'Export Profile', doctype: 'Export Profile', path: docPath('Export Profile') },
@@ -84,7 +84,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Quality & Feedback',
-    icon: 'doc',
+    icon: 'quality',
     items: [
       { label: 'Data Quality Policy', doctype: 'Data Quality Policy', path: docPath('Data Quality Policy') },
       { label: 'Product Feedback', doctype: 'Product Feedback', path: docPath('Product Feedback') },
@@ -94,7 +94,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Market Intelligence',
-    icon: 'doc',
+    icon: 'market',
     items: [
       { label: 'Competitor Analysis', doctype: 'Competitor Analysis', path: docPath('Competitor Analysis') },
       { label: 'Market Insight', doctype: 'Market Insight', path: docPath('Market Insight') },
@@ -104,7 +104,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Data Management (MDM)',
-    icon: 'doc',
+    icon: 'mdm',
     items: [
       { label: 'Golden Record', doctype: 'Golden Record', path: docPath('Golden Record') },
       { label: 'Source System', doctype: 'Source System', path: docPath('Source System') },
@@ -116,7 +116,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'AI & Automation',
-    icon: 'doc',
+    icon: 'ai',
     items: [
       { label: 'AI Approval Queue', doctype: 'AI Approval Queue', path: docPath('AI Approval Queue') },
       { label: 'AI Enrichment Job', doctype: 'AI Enrichment Job', path: docPath('AI Enrichment Job') },
@@ -128,7 +128,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Localization',
-    icon: 'doc',
+    icon: 'locale',
     items: [
       { label: 'PIM Locale', doctype: 'PIM Locale', path: docPath('PIM Locale') },
       { label: 'PIM Translation Status', doctype: 'PIM Translation Status', path: docPath('PIM Translation Status') },
@@ -137,7 +137,7 @@ export const PIM_NAV_GROUPS: PimNavGroup[] = [
   },
   {
     label: 'Portal & Permissions',
-    icon: 'doc',
+    icon: 'portal',
     items: [
       { label: 'Brand Portal User', doctype: 'Brand Portal User', path: docPath('Brand Portal User') },
       { label: 'Partner Submission', doctype: 'Partner Submission', path: docPath('Partner Submission') },

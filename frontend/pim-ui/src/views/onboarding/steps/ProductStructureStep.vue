@@ -179,46 +179,46 @@ defineExpose({ isValid })
   <div class="space-y-6">
     <!-- Estimated SKU Count -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Estimated SKU Count <span class="text-red-500">*</span>
       </label>
       <div class="space-y-2">
         <label
           v-for="option in SKU_COUNT_OPTIONS"
           :key="option.value"
-          class="flex cursor-pointer items-center gap-3 rounded-lg border border-pim-border px-4 py-3 transition-colors hover:bg-pim-surface"
+          class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
           :class="{
-            'border-primary-500 bg-primary-50': form.estimated_sku_count === option.value,
+            'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20': form.estimated_sku_count === option.value,
           }"
         >
           <input
             v-model="form.estimated_sku_count"
             type="radio"
             :value="option.value"
-            class="h-4 w-4 border-pim-border text-primary-600 focus:ring-primary-500"
+            class="h-4 w-4 border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div>
-            <p class="text-sm font-medium text-pim-text">{{ option.label }}</p>
-            <p class="text-xs text-pim-muted">{{ option.description }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ option.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ option.description }}</p>
           </div>
         </label>
       </div>
     </div>
 
     <!-- Uses Variants Toggle -->
-    <div class="rounded-lg border border-pim-border p-4">
+    <div class="rounded-lg border border-gray-300 dark:border-gray-600 p-4">
       <div class="flex items-start gap-3">
         <input
           id="uses_variants"
           v-model="form.uses_variants"
           type="checkbox"
-          class="mt-0.5 h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+          class="mt-0.5 h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
         />
         <div class="flex-1">
-          <label class="block text-sm font-medium text-pim-text" for="uses_variants">
+          <label class="block text-sm font-medium text-gray-900 dark:text-white" for="uses_variants">
             My products have variants
           </label>
-          <p class="mt-0.5 text-xs text-pim-muted">
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             Products come in different sizes, colors, materials, or other variations.
           </p>
         </div>
@@ -226,7 +226,7 @@ defineExpose({ isValid })
 
       <!-- Variant Axes (shown when variants enabled) -->
       <div v-if="form.uses_variants" class="mt-3 pl-7">
-        <label class="mb-2 block text-xs font-medium text-pim-text">
+        <label class="mb-2 block text-xs font-medium text-gray-900 dark:text-white">
           Select variant axes:
         </label>
         <div class="flex flex-wrap gap-2">
@@ -237,8 +237,8 @@ defineExpose({ isValid })
             class="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
             :class="
               (form.variant_axes ?? []).includes(axis.value)
-                ? 'border-primary-500 bg-primary-50 text-primary-700'
-                : 'border-pim-border bg-white text-pim-text hover:bg-pim-surface'
+                ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/20 dark:text-primary-400'
+                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
             "
             @click="toggleVariantAxis(axis.value)"
           >
@@ -250,16 +250,16 @@ defineExpose({ isValid })
 
     <!-- Product Family Count -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="product_family_count">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white" for="product_family_count">
         Product Family Count <span class="text-red-500">*</span>
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         Families group products by shared attributes (e.g., Apparel, Electronics, Accessories).
       </p>
       <select
         id="product_family_count"
         v-model="form.product_family_count"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option value="">Select a range</option>
         <option
@@ -274,23 +274,23 @@ defineExpose({ isValid })
 
     <!-- Custom Families (tag input) -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Custom Family Names
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         Optionally name your product families now. You can always add or change these later.
       </p>
       <div class="flex gap-2">
         <input
           v-model="newFamilyName"
           type="text"
-          class="flex-1 rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           placeholder="e.g., T-Shirts, Accessories"
           @keydown="handleFamilyKeydown"
         />
         <button
           type="button"
-          class="rounded-lg border border-primary-500 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100"
+          class="rounded-lg border border-primary-500 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
           @click="addCustomFamily"
         >
           Add
@@ -301,7 +301,7 @@ defineExpose({ isValid })
         <span
           v-for="family in form.custom_families"
           :key="family"
-          class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700"
+          class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-400"
         >
           {{ family }}
           <button
@@ -319,30 +319,30 @@ defineExpose({ isValid })
 
     <!-- Data Import Source -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Data Import Source <span class="text-red-500">*</span>
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         How will you initially populate your product catalog?
       </p>
       <div class="space-y-2">
         <label
           v-for="option in DATA_IMPORT_OPTIONS"
           :key="option.value"
-          class="flex cursor-pointer items-center gap-3 rounded-lg border border-pim-border px-4 py-3 transition-colors hover:bg-pim-surface"
+          class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
           :class="{
-            'border-primary-500 bg-primary-50': form.data_import_source === option.value,
+            'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20': form.data_import_source === option.value,
           }"
         >
           <input
             v-model="form.data_import_source"
             type="radio"
             :value="option.value"
-            class="h-4 w-4 border-pim-border text-primary-600 focus:ring-primary-500"
+            class="h-4 w-4 border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
           />
           <div>
-            <p class="text-sm font-medium text-pim-text">{{ option.label }}</p>
-            <p class="text-xs text-pim-muted">{{ option.description }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ option.label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ option.description }}</p>
           </div>
         </label>
       </div>

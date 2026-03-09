@@ -89,7 +89,7 @@ class TestSyncQueueEndToEnd(unittest.TestCase):
         try:
             family = frappe.new_doc("Product Family")
             family.family_name = family_name
-            family.family_code = "test-family-e2e"
+            family.family_code = "testfamilye2e"
             family.is_active = 1
             family.insert(ignore_permissions=True)
             frappe.db.commit()

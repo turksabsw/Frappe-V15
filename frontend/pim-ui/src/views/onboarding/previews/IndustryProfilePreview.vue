@@ -36,62 +36,62 @@ const INDUSTRY_META: Record<string, {
 }> = {
   fashion: {
     icon: '&#128087;',
-    bgColor: 'bg-pink-50',
-    textColor: 'text-pink-700',
-    borderColor: 'border-pink-200',
-    accentBg: 'bg-pink-100',
+    bgColor: 'bg-pink-50 dark:bg-pink-950',
+    textColor: 'text-pink-700 dark:text-pink-400',
+    borderColor: 'border-pink-200 dark:border-pink-800',
+    accentBg: 'bg-pink-100 dark:bg-pink-900/40',
   },
   industrial: {
     icon: '&#9881;',
-    bgColor: 'bg-slate-50',
-    textColor: 'text-slate-700',
-    borderColor: 'border-slate-200',
-    accentBg: 'bg-slate-100',
+    bgColor: 'bg-slate-50 dark:bg-slate-950',
+    textColor: 'text-slate-700 dark:text-slate-400',
+    borderColor: 'border-slate-200 dark:border-slate-800',
+    accentBg: 'bg-slate-100 dark:bg-slate-900/40',
   },
   food: {
     icon: '&#127828;',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-700',
-    borderColor: 'border-amber-200',
-    accentBg: 'bg-amber-100',
+    bgColor: 'bg-amber-50 dark:bg-amber-950',
+    textColor: 'text-amber-700 dark:text-amber-400',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    accentBg: 'bg-amber-100 dark:bg-amber-900/40',
   },
   electronics: {
     icon: '&#128187;',
-    bgColor: 'bg-cyan-50',
-    textColor: 'text-cyan-700',
-    borderColor: 'border-cyan-200',
-    accentBg: 'bg-cyan-100',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950',
+    textColor: 'text-cyan-700 dark:text-cyan-400',
+    borderColor: 'border-cyan-200 dark:border-cyan-800',
+    accentBg: 'bg-cyan-100 dark:bg-cyan-900/40',
   },
   health_beauty: {
     icon: '&#128142;',
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-700',
-    borderColor: 'border-purple-200',
-    accentBg: 'bg-purple-100',
+    bgColor: 'bg-purple-50 dark:bg-purple-950',
+    textColor: 'text-purple-700 dark:text-purple-400',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    accentBg: 'bg-purple-100 dark:bg-purple-900/40',
   },
   automotive: {
     icon: '&#128663;',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-700',
-    borderColor: 'border-red-200',
-    accentBg: 'bg-red-100',
+    bgColor: 'bg-red-50 dark:bg-red-950',
+    textColor: 'text-red-700 dark:text-red-400',
+    borderColor: 'border-red-200 dark:border-red-800',
+    accentBg: 'bg-red-100 dark:bg-red-900/40',
   },
   custom: {
     icon: '&#128295;',
-    bgColor: 'bg-gray-50',
-    textColor: 'text-gray-700',
-    borderColor: 'border-gray-200',
-    accentBg: 'bg-gray-100',
+    bgColor: 'bg-gray-50 dark:bg-gray-800',
+    textColor: 'text-gray-700 dark:text-gray-400',
+    borderColor: 'border-gray-200 dark:border-gray-600',
+    accentBg: 'bg-gray-100 dark:bg-gray-700',
   },
 }
 
 /** Default visual metadata for unknown sectors */
 const DEFAULT_META = {
   icon: '&#128736;',
-  bgColor: 'bg-gray-50',
-  textColor: 'text-gray-700',
-  borderColor: 'border-gray-200',
-  accentBg: 'bg-gray-100',
+  bgColor: 'bg-gray-50 dark:bg-gray-800',
+  textColor: 'text-gray-700 dark:text-gray-400',
+  borderColor: 'border-gray-200 dark:border-gray-600',
+  accentBg: 'bg-gray-100 dark:bg-gray-700',
 }
 
 // ============================================================================
@@ -140,7 +140,7 @@ const hasEntityCounts = computed(() => {
 
           <div class="min-w-0 flex-1">
             <!-- Industry Name -->
-            <h3 class="text-base font-semibold text-pim-text">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white">
               {{ data.industry_label ?? 'Selected Industry' }}
             </h3>
 
@@ -156,7 +156,7 @@ const hasEntityCounts = computed(() => {
             <!-- Description -->
             <p
               v-if="data.industry_description"
-              class="mt-1.5 text-xs text-pim-muted"
+              class="mt-1.5 text-xs text-gray-500 dark:text-gray-400"
             >
               {{ data.industry_description }}
             </p>
@@ -167,26 +167,26 @@ const hasEntityCounts = computed(() => {
       <!-- Entity Counts (from template) -->
       <div
         v-if="hasEntityCounts"
-        class="grid grid-cols-3 gap-px border-t bg-white/50"
+        class="grid grid-cols-3 gap-px border-t bg-white/50 dark:bg-gray-700/50"
         :class="meta.borderColor"
       >
-        <div class="bg-white p-3 text-center">
+        <div class="bg-white dark:bg-gray-700 p-3 text-center">
           <p class="text-lg font-semibold text-primary-600">
             {{ data.attribute_count ?? 0 }}
           </p>
-          <p class="text-xs text-pim-muted">Attributes</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Attributes</p>
         </div>
-        <div class="bg-white p-3 text-center">
+        <div class="bg-white dark:bg-gray-700 p-3 text-center">
           <p class="text-lg font-semibold text-primary-600">
             {{ data.family_count ?? 0 }}
           </p>
-          <p class="text-xs text-pim-muted">Families</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Families</p>
         </div>
-        <div class="bg-white p-3 text-center">
+        <div class="bg-white dark:bg-gray-700 p-3 text-center">
           <p class="text-lg font-semibold text-primary-600">
             {{ data.category_count ?? 0 }}
           </p>
-          <p class="text-xs text-pim-muted">Categories</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Categories</p>
         </div>
       </div>
     </div>
@@ -196,7 +196,7 @@ const hasEntityCounts = computed(() => {
       v-if="hasSelection && data.template_version"
       class="flex items-center justify-center"
     >
-      <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs text-pim-muted">
+      <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
         <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
@@ -207,9 +207,9 @@ const hasEntityCounts = computed(() => {
     <!-- What You'll Get Section (no entity counts but has selection) -->
     <div
       v-if="hasSelection && !hasEntityCounts"
-      class="rounded-lg border border-gray-100 bg-white p-4 text-center"
+      class="rounded-lg border border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700 dark:bg-gray-700 p-4 text-center"
     >
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         Template details will appear after selection is confirmed.
       </p>
     </div>
@@ -220,7 +220,7 @@ const hasEntityCounts = computed(() => {
       class="flex flex-col items-center justify-center py-8 text-center"
     >
       <svg
-        class="mb-2 h-8 w-8 text-gray-300"
+        class="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -233,7 +233,7 @@ const hasEntityCounts = computed(() => {
           d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
         />
       </svg>
-      <p class="text-sm text-pim-muted">Select an industry to see your profile</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Select an industry to see your profile</p>
     </div>
   </div>
 </template>

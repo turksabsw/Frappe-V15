@@ -94,7 +94,7 @@ class TestPIMToERPSync(unittest.TestCase):
         try:
             family = frappe.new_doc("Product Family")
             family.family_name = family_name
-            family.family_code = "test-family-sync-int"
+            family.family_code = "testfamilysyncint"
             family.is_active = 1
             family.insert(ignore_permissions=True)
             frappe.db.commit()

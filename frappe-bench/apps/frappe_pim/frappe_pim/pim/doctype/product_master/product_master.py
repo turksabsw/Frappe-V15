@@ -38,6 +38,7 @@ PM_TO_ITEM_MAPPING = {
     # They map 1:1 with the same field name
     "sku": "custom_pim_sku",
     "lifecycle_stage": "custom_pim_lifecycle_stage",
+    "workflow_state": "custom_pim_workflow_state",
     "status": "custom_pim_status",
     "barcode": "custom_pim_barcode",
     "ean": "custom_pim_ean",
@@ -71,6 +72,10 @@ PM_TO_ITEM_MAPPING = {
 
 # Reverse mapping for Item to Product Master sync
 ITEM_TO_PM_MAPPING = {v: k for k, v in PM_TO_ITEM_MAPPING.items()}
+
+# Aliases used in tests and external code
+PRODUCT_TO_ITEM_FIELDS = PM_TO_ITEM_MAPPING
+ITEM_TO_PRODUCT_FIELDS = ITEM_TO_PM_MAPPING
 
 # Child table field names that need to be loaded separately
 CHILD_TABLE_FIELDS = [
@@ -108,17 +113,32 @@ class ProductMaster(Document):
         """Get list of Product Masters by querying Items with PIM data."""
         # Build filters for Item query
         filters = {}
-        if args.get("filters"):
-            for f in args.get("filters", []):
-                if isinstance(f, (list, tuple)) and len(f) >= 3:
-                    fieldname, operator, value = f[0], f[1], f[2]
-                    # Map PM field to Item field
-                    item_field = PM_TO_ITEM_MAPPING.get(fieldname, fieldname)
-                    filters[item_field] = [operator, value]
-                elif isinstance(f, dict):
-                    for k, v in f.items():
-                        item_field = PM_TO_ITEM_MAPPING.get(k, k)
-                        filters[item_field] = v
+        raw_filters = args.get("filters")
+        if raw_filters:
+            if isinstance(raw_filters, dict):
+                # Dict filter: {"fieldname": value}
+                for k, v in raw_filters.items():
+                    item_field = PM_TO_ITEM_MAPPING.get(k, k)
+                    filters[item_field] = v
+            else:
+                # List filter: [["fieldname", "=", value], ...] or
+                # [["Doctype", "fieldname", "=", value], ...]
+                for f in raw_filters:
+                    if isinstance(f, (list, tuple)):
+                        if len(f) == 4:
+                            # Frappe internal format: [doctype, fieldname, operator, value]
+                            _, fieldname, operator, value = f
+                        elif len(f) == 3:
+                            # Short format: [fieldname, operator, value]
+                            fieldname, operator, value = f
+                        else:
+                            continue
+                        item_field = PM_TO_ITEM_MAPPING.get(fieldname, fieldname)
+                        filters[item_field] = [operator, value]
+                    elif isinstance(f, dict):
+                        for k, v in f.items():
+                            item_field = PM_TO_ITEM_MAPPING.get(k, k)
+                            filters[item_field] = v
 
         # Query Items with all needed fields
         items = frappe.get_all(
@@ -126,7 +146,8 @@ class ProductMaster(Document):
             filters=filters,
             fields=[
                 "name", "item_name", "item_code", "image", "modified",
-                "creation", "owner", "custom_pim_status", "custom_pim_product_family"
+                "creation", "owner", "custom_pim_status", "custom_pim_product_family",
+                "custom_pim_workflow_state"
             ],
             limit_page_length=args.get("limit_page_length", 20),
             limit_start=args.get("limit_start", 0),
@@ -146,6 +167,7 @@ class ProductMaster(Document):
                 "owner": item.owner,
                 "status": item.custom_pim_status or "Draft",
                 "product_family": item.custom_pim_product_family,
+                "workflow_state": item.custom_pim_workflow_state,
             })
 
         return result
@@ -215,6 +237,41 @@ class ProductMaster(Document):
 
         return result
 
+    @staticmethod
+    def _map_fields_to_item(fields):
+        """Map Product Master field names to Item field names for queries."""
+        result = []
+        for f in fields:
+            result.append(PM_TO_ITEM_MAPPING.get(f, f))
+        return result
+
+    @staticmethod
+    def _map_filters_to_item(filters):
+        """Map Product Master filter keys to Item field names."""
+        if isinstance(filters, dict):
+            return {PM_TO_ITEM_MAPPING.get(k, k): v for k, v in filters.items()}
+        return filters
+
+    @staticmethod
+    def _transform_item_to_product(item_dict):
+        """Transform an Item dict to Product Master field names."""
+        result = {}
+        for item_field, value in item_dict.items():
+            pm_field = ITEM_TO_PM_MAPPING.get(item_field, item_field)
+            result[pm_field] = value
+        return result
+
+    @staticmethod
+    def _map_order_by(order_by):
+        """Map Product Master order_by field to Item field."""
+        if not order_by:
+            return "modified desc"
+        parts = order_by.split()
+        if parts:
+            item_field = PM_TO_ITEM_MAPPING.get(parts[0], parts[0])
+            parts[0] = item_field
+        return " ".join(parts)
+
     def load_from_db(self):
         """Load Product Master data from ERPNext Item."""
         if not self.name:
@@ -222,7 +279,7 @@ class ProductMaster(Document):
 
         # Check if Item exists
         if not frappe.db.exists("Item", self.name):
-            frappe.throw(_("Item {0} not found").format(self.name))
+            frappe.throw(_("Item {0} not found").format(self.name), frappe.DoesNotExistError)
 
         # Load Item document
         item = frappe.get_doc("Item", self.name)
@@ -323,6 +380,8 @@ class ProductMaster(Document):
             self.__dict__["name"] = item.name
             # Reload item to get creation/modified timestamps
             item.reload()
+        except frappe.DuplicateEntryError:
+            raise
         except Exception as e:
             frappe.throw(_("Failed to create Item: {0}").format(str(e)))
 
@@ -518,6 +577,7 @@ class ProductMaster(Document):
         self.validate_price_items()
         self.validate_certification_dates()
         self.update_has_variants_flag()
+        self.validate_publish_workflow()
 
     def validate_circular_relations(self):
         """Prevent product from being related to itself."""
@@ -642,6 +702,37 @@ class ProductMaster(Document):
                 {"custom_pim_parent_product": self.name}
             )
             self.has_variants = variant_count > 0
+
+    def validate_publish_workflow(self):
+        """
+        C) Company-size workflow requirement.
+        Companies with 201+ employees must go through 'In Review' status
+        before a product can be set to 'Published'.
+        Prevents direct Draft → Published transitions.
+        """
+        if self.get("status") != "Published":
+            return
+
+        try:
+            company_size = frappe.db.get_single_value("Tenant Config", "company_size")
+        except Exception:
+            return  # Tenant Config unavailable — skip restriction
+
+        LARGE_COMPANY_SIZES = {"201-500", "501-1000", "1000+"}
+        if company_size not in LARGE_COMPANY_SIZES:
+            return  # Small/medium companies can publish directly
+
+        # Check if the product was previously "In Review"
+        old_status = frappe.db.get_value("Item", self.name, "custom_pim_status") if self.name else None
+        if old_status != "In Review":
+            frappe.throw(
+                _(
+                    "Products must go through 'In Review' status before being Published. "
+                    "This is required for companies with 201+ employees. "
+                    "Please set the status to 'In Review' first."
+                ),
+                title=_("Approval Required"),
+            )
 
     @frappe.whitelist()
     def calculate_completeness(self):
@@ -1170,3 +1261,113 @@ def sync_product_to_channels(product_name, channel_names=None):
         channel_names = json.loads(channel_names)
 
     return doc.sync_to_channels(channel_names)
+
+
+@frappe.whitelist()
+def get_family_attributes(family_name):
+    """Get attributes for a product family.
+
+    Returns list of attribute dicts from Family Attribute Template child table.
+    """
+    if not family_name:
+        frappe.throw(_("Family name is required."))
+
+    attributes = frappe.get_all(
+        "Family Attribute Template",
+        filters={"parent": family_name},
+        fields=["attribute", "is_required_in_family", "default_value", "sort_order"],
+        order_by="sort_order"
+    )
+    return attributes
+
+
+@frappe.whitelist()
+def bulk_update_attribute(products, attribute, value, locale=None):
+    """Bulk update an attribute value across multiple products.
+
+    Args:
+        products: List of Product Master names
+        attribute: PIM Attribute name
+        value: Value to set
+        locale: Optional locale code
+
+    Returns:
+        dict with 'updated' count and 'errors' list
+    """
+    if isinstance(products, str):
+        import json
+        products = json.loads(products)
+
+    updated = 0
+    errors = []
+
+    for product_name in products:
+        try:
+            # Check product exists
+            if not frappe.db.exists("Item", product_name):
+                errors.append({"product": product_name, "error": "Product not found"})
+                continue
+
+            # Upsert attribute value in Product Attribute Value child table
+            existing = frappe.db.get_value(
+                "Product Attribute Value",
+                {"parent": product_name, "attribute": attribute, "locale": locale or ""},
+                "name"
+            )
+            if existing:
+                frappe.db.set_value("Product Attribute Value", existing, "value_text", value)
+            else:
+                av = frappe.get_doc({
+                    "doctype": "Product Attribute Value",
+                    "parent": product_name,
+                    "parenttype": "Product Master",
+                    "parentfield": "attribute_values",
+                    "attribute": attribute,
+                    "value_text": value,
+                    "locale": locale or "",
+                })
+                av.insert(ignore_permissions=True, ignore_links=True)
+            updated += 1
+        except Exception as e:
+            errors.append({"product": product_name, "error": str(e)})
+
+    return {"updated": updated, "errors": errors}
+
+
+@frappe.whitelist()
+def duplicate_product(product_name, new_code=None):
+    """Duplicate a Product Master.
+
+    Creates a new product with "(Copy)" appended to the name,
+    a new unique product code, and status reset to Draft.
+
+    Args:
+        product_name: Name of the product to duplicate
+        new_code: Optional explicit code for the new product
+
+    Returns:
+        Name of the newly created product
+    """
+    from frappe.utils import random_string
+
+    if not product_name:
+        frappe.throw(_("Product name is required."))
+
+    source = frappe.get_doc("Product Master", product_name)
+
+    if not new_code:
+        new_code = f"{source.product_code}-COPY-{random_string(4).upper()}"
+
+    new_doc = frappe.get_doc({
+        "doctype": "Product Master",
+        "product_name": f"{source.product_name} (Copy)",
+        "product_code": new_code,
+        "short_description": source.short_description,
+        "status": "Draft",
+        "product_family": source.product_family,
+        "brand": source.brand,
+        "manufacturer": source.manufacturer,
+        "is_template": source.is_template,
+    })
+    new_doc.insert(ignore_permissions=True)
+    return new_doc.name

@@ -366,7 +366,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_var_attr_{random_string(6).lower()}",
             "attribute_name": f"Test Variant Attr {random_string(4)}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
@@ -375,7 +375,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
-            "family_code": f"test-family-{random_string(6).lower()}",
+            "family_code": f"testfamily{random_string(6).lower()}",
             "allow_variants": 1,
             "variant_attributes": [{
                 "attribute": attr.name,
@@ -398,7 +398,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
-            "family_code": f"test-family-{random_string(6).lower()}",
+            "family_code": f"testfamily{random_string(6).lower()}",
             "allow_variants": 1,
             "variant_attributes": [{
                 "attribute": "NonExistentAttribute12345",
@@ -419,7 +419,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_sort_attr_{random_string(6).lower()}",
             "attribute_name": f"Test Sort Attr {random_string(4)}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
@@ -428,7 +428,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
-            "family_code": f"test-family-{random_string(6).lower()}",
+            "family_code": f"testfamily{random_string(6).lower()}",
             "allow_variants": 1,
             "variant_attributes": [{
                 "attribute": attr.name
@@ -450,7 +450,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_attr1_{random_string(6).lower()}",
             "attribute_name": f"Test Attr 1 {random_string(4)}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr1.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr1.name)
@@ -459,7 +459,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"test_attr2_{random_string(6).lower()}",
             "attribute_name": f"Test Attr 2 {random_string(4)}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr2.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr2.name)
@@ -468,7 +468,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
-            "family_code": f"test-family-{random_string(6).lower()}",
+            "family_code": f"testfamily{random_string(6).lower()}",
             "allow_variants": 1,
             "variant_attributes": [
                 {"attribute": attr1.name, "sort_order": 10},
@@ -495,7 +495,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
                 "doctype": "PIM Attribute",
                 "attribute_code": f"test_multi_attr_{i}_{random_string(6).lower()}",
                 "attribute_name": f"Test Multi Attr {i} {random_string(4)}",
-                "data_type": "Data"
+                "data_type": "Text"
             })
             attr.insert(ignore_permissions=True)
             self.track_document("PIM Attribute", attr.name)
@@ -505,7 +505,7 @@ class TestFamilyVariantAttributeIntegrity(unittest.TestCase):
         family = frappe.get_doc({
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
-            "family_code": f"test-family-{random_string(6).lower()}",
+            "family_code": f"testfamily{random_string(6).lower()}",
             "allow_variants": 1,
             "variant_attributes": [
                 {"attribute": attrs[0].name, "sort_order": 1},

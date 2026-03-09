@@ -88,7 +88,7 @@ def create_test_attribute(test_case=None, code=None, name=None, data_type="Data"
         "attribute_code": code,
         "attribute_name": name,
         "data_type": data_type,
-        "is_required": is_required,
+        "is_required_in_family": is_required,
     }
 
     if attribute_group:
@@ -175,12 +175,12 @@ def create_test_family(test_case=None, name=None, parent_family=None,
     if attributes:
         for attr in attributes:
             if isinstance(attr, str):
-                doc.append("attribute_templates", {
+                doc.append("attributes", {
                     "attribute": attr,
-                    "is_required": 0
+                    "is_required_in_family": 0
                 })
             elif isinstance(attr, dict):
-                doc.append("attribute_templates", attr)
+                doc.append("attributes", attr)
 
     doc.insert(ignore_permissions=True)
 
@@ -425,14 +425,14 @@ def get_test_fixtures():
         "doctype": "Product Family",
         "family_name": f"Test Family {suffix}",
         "is_group": 0,
-        "attribute_templates": [
+        "attributes": [
             {
                 "attribute": fixtures["attributes"][0].name,
-                "is_required": 1
+                "is_required_in_family": 1
             },
             {
                 "attribute": fixtures["attributes"][1].name,
-                "is_required": 0
+                "is_required_in_family": 0
             }
         ]
     }).insert(ignore_permissions=True)

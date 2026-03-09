@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * DocTypeList – generic list view for any PIM DocType.
- * Same layout as Products: row click opens doc, columns Product/Name, Status, FAMILY, Completeness, ACTIONS.
+ * Clean Flowbite table with Name, Modified, Owner columns + Actions.
  */
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -18,27 +18,18 @@ interface ListRow {
   name: string
   modified?: string
   owner?: string
-  status?: string
-  product_family?: string
-  family?: string
-  completeness_score?: number
-  product_code?: string
-  collection_name?: string
-  type_name?: string
-  family_name?: string
-  variant_name?: string
   [key: string]: unknown
 }
 
 const rows = ref<ListRow[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const totalCount = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const search = ref('')
+const sortField = ref('modified')
+const sortDir = ref<'asc' | 'desc'>('desc')
 
-/** Only request fields that exist on every Frappe doctype (others cause 417 for some doctypes) */
 const LIST_FIELDS = ['name', 'modified', 'owner']
 
 async function loadList(): Promise<void> {
@@ -53,12 +44,11 @@ async function loadList(): Promise<void> {
       doctype: decodedDoctype.value,
       fields: LIST_FIELDS,
       filters,
-      order_by: 'modified desc',
+      order_by: `${sortField.value} ${sortDir.value}`,
       limit_start: (page.value - 1) * pageSize.value,
       limit_page_length: pageSize.value,
     })
     rows.value = list || []
-    totalCount.value = list?.length ?? 0
   } catch (e: unknown) {
     const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : 'Failed to load list'
     error.value = msg
@@ -68,7 +58,6 @@ async function loadList(): Promise<void> {
   }
 }
 
-/** Row click: open doc in app (all doctypes use generic form with full Desk layout) */
 function openRow(row: ListRow): void {
   router.push(`/doc/${encodeURIComponent(decodedDoctype.value)}/${encodeURIComponent(row.name)}`)
 }
@@ -78,31 +67,37 @@ function openInDesk(e: Event, name: string): void {
   const base = typeof window !== 'undefined' && (window as unknown as { __frappe_base_url?: string }).__frappe_base_url
   const baseUrl = base || 'http://localhost:8000'
   const slug = decodedDoctype.value.replace(/\s+/g, '-').toLowerCase()
-  const url = `${baseUrl}/app/${slug}/${encodeURIComponent(name)}`
-  window.open(url, '_blank')
+  window.open(`${baseUrl}/app/${slug}/${encodeURIComponent(name)}`, '_blank')
 }
 
-/** Subtitle for Product column (code, type, family name – avoid repeating name) */
-function rowSubtitle(row: ListRow): string {
-  const s = (row.product_code ?? row.collection_name ?? row.type_name ?? row.family_name ?? row.variant_name) as string | undefined
-  return s && s !== row.name ? s : ''
-}
-
-function statusBadgeClass(status: string | undefined): string {
-  if (!status) return 'bg-gray-100 text-gray-800'
-  switch (status) {
-    case 'Active': case 'Published': return 'bg-green-100 text-green-800'
-    case 'Draft': return 'bg-amber-100 text-amber-800'
-    case 'Discontinued': case 'Archived': return 'bg-gray-100 text-gray-800'
-    default: return 'bg-gray-100 text-gray-800'
+function handleSort(field: string): void {
+  if (sortField.value === field) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortDir.value = 'desc'
   }
+  loadList()
 }
 
-function completenessColor(score: number | undefined): string {
-  if (score == null) return 'bg-gray-200'
-  if (score >= 80) return 'bg-green-500'
-  if (score >= 50) return 'bg-amber-500'
-  return 'bg-red-500'
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function formatOwner(owner?: string): string {
+  if (!owner) return '—'
+  return owner.replace(/@.*$/, '')
 }
 
 onMounted(() => loadList())
@@ -110,132 +105,235 @@ watch([doctype, page, pageSize], () => loadList())
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-2xl font-semibold text-pim-text">
-        {{ decodedDoctype }}
-      </h1>
+  <div class="space-y-5">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ decodedDoctype }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{ rows.length }} record{{ rows.length !== 1 ? 's' : '' }} on this page
+        </p>
+      </div>
       <div class="flex items-center gap-2">
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search by name..."
-          class="rounded-md border border-pim-border px-3 py-2 text-sm"
-          @keyup.enter="loadList"
-        />
         <button
-          type="button"
-          class="btn-primary rounded-md px-4 py-2 text-sm"
-          @click="loadList"
+          class="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+          @click="router.push(`/doc/${encodeURIComponent(decodedDoctype)}/new`)"
         >
-          Search
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          + Create
+        </button>
+        <button
+          class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          title="Open in Frappe Desk"
+          @click="openInDesk($event, '')"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Desk
         </button>
       </div>
     </div>
 
-    <p v-if="error" class="rounded-lg bg-red-50 p-4 text-sm text-red-700">
-      {{ error }}
-    </p>
-
-    <div v-else-if="loading" class="flex justify-center py-12">
-      <span class="text-pim-muted">Loading...</span>
-    </div>
-
-    <!-- Table: same columns as Product list – checkbox, Product, Status, FAMILY, Completeness, ACTIONS -->
-    <div v-else class="overflow-hidden rounded-lg border border-pim-border bg-white shadow">
-      <!-- Header row -->
-      <div class="flex items-center gap-4 border-b border-pim-border bg-gray-50 px-4 py-3 text-xs font-medium uppercase tracking-wider text-pim-muted">
-        <div class="w-8" />
-        <div class="min-w-0 flex-1">Product</div>
-        <div class="hidden w-32 md:block">Status</div>
-        <div class="hidden w-32 truncate lg:block">Family</div>
-        <div class="w-28">Completeness</div>
-        <div class="w-24 text-right">Actions</div>
-      </div>
-
-      <!-- Rows: clickable, open on row click -->
-      <div class="divide-y divide-pim-border">
-        <div
-          v-for="row in rows"
-          :key="row.name"
-          class="flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors hover:bg-gray-50"
-          @click="openRow(row)"
-        >
-          <div class="w-8 flex-shrink-0" @click.stop>
-            <input type="checkbox" class="rounded border-gray-300" :checked="false" @change.prevent="">
+    <!-- Toolbar Card -->
+    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <!-- Search -->
+        <div class="relative flex-1 max-w-lg">
+          <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
+            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
+          <input
+            v-model="search"
+            type="text"
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 ps-10 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
+            placeholder="Search by name..."
+            @keyup.enter="loadList"
+          />
+        </div>
 
-          <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-pim-text">{{ row.name }}</p>
-            <p v-if="rowSubtitle(row)" class="truncate text-sm text-pim-muted">{{ rowSubtitle(row) }}</p>
-          </div>
+        <!-- Per page + Refresh -->
+        <div class="flex items-center gap-2">
+          <select
+            :value="pageSize"
+            class="rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            @change="pageSize = Number(($event.target as HTMLSelectElement).value); page = 1; loadList()"
+          >
+            <option :value="20">20 per page</option>
+            <option :value="50">50 per page</option>
+            <option :value="100">100 per page</option>
+          </select>
 
-          <div class="hidden w-32 flex-shrink-0 md:block">
-            <span
-              v-if="row.status"
-              class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-              :class="statusBadgeClass(row.status)"
-            >
-              {{ row.status }}
-            </span>
-            <span v-else class="text-sm text-pim-muted">–</span>
-          </div>
-
-          <div class="hidden w-32 flex-shrink-0 truncate text-sm text-pim-muted lg:block">
-            {{ (row.product_family ?? row.family) || '–' }}
-          </div>
-
-          <div class="w-28 flex-shrink-0">
-            <div class="flex items-center gap-2">
-              <div class="h-1.5 flex-1 rounded-full bg-gray-200">
-                <div
-                  class="h-1.5 rounded-full transition-all"
-                  :class="completenessColor(row.completeness_score)"
-                  :style="{ width: `${row.completeness_score ?? 0}%` }"
-                />
-              </div>
-              <span class="text-xs text-pim-muted">{{ row.completeness_score ?? 0 }}%</span>
-            </div>
-          </div>
-
-          <div class="w-24 flex-shrink-0 text-right" @click.stop>
-            <button
-              type="button"
-              class="text-sm text-pim-muted hover:text-pim-text hover:underline"
-              @click="openInDesk($event, row.name)"
-            >
-              Open in Desk
-            </button>
-          </div>
+          <button
+            class="inline-flex items-center rounded-lg border border-gray-300 bg-white p-2.5 text-gray-500 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+            title="Refresh"
+            @click="loadList"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
         </div>
       </div>
+    </div>
 
-      <div v-if="rows.length === 0 && !loading" class="px-4 py-8 text-center text-pim-muted">
-        No records found.
+    <!-- Error State -->
+    <div v-if="error" class="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20" role="alert">
+      <svg class="h-5 w-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <p class="text-sm font-medium text-red-800 dark:text-red-300">{{ error }}</p>
+      <button class="ml-auto text-sm font-medium text-red-700 underline dark:text-red-400" @click="loadList">Retry</button>
+    </div>
+
+    <!-- Loading -->
+    <div v-else-if="loading" class="flex items-center justify-center py-16">
+      <div class="flex flex-col items-center gap-3">
+        <div class="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+        <span class="text-sm text-gray-500 dark:text-gray-400">Loading...</span>
       </div>
     </div>
 
-    <div class="flex items-center justify-between text-sm text-pim-muted">
-      <span>Showing {{ rows.length }} records</span>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          class="rounded border border-pim-border px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
-          :disabled="page <= 1"
-          @click="page--; loadList()"
-        >
-          Previous
-        </button>
-        <span>Page {{ page }}</span>
-        <button
-          type="button"
-          class="rounded border border-pim-border px-3 py-1 hover:bg-gray-50 disabled:opacity-50"
-          :disabled="rows.length < pageSize"
-          @click="page++; loadList()"
-        >
-          Next
-        </button>
+    <!-- Empty State -->
+    <div v-else-if="rows.length === 0" class="rounded-lg border border-gray-200 bg-white py-16 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No records found</h3>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        {{ search ? 'Try adjusting your search.' : `No ${decodedDoctype} records yet.` }}
+      </p>
+    </div>
+
+    <!-- Table -->
+    <div v-else class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+          <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-3">
+                <button
+                  class="inline-flex items-center gap-1 font-medium uppercase hover:text-gray-900 dark:hover:text-white"
+                  @click="handleSort('name')"
+                >
+                  Name
+                  <svg v-if="sortField === 'name'" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortDir === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                  </svg>
+                </button>
+              </th>
+              <th scope="col" class="hidden px-6 py-3 sm:table-cell">
+                <button
+                  class="inline-flex items-center gap-1 font-medium uppercase hover:text-gray-900 dark:hover:text-white"
+                  @click="handleSort('modified')"
+                >
+                  Modified
+                  <svg v-if="sortField === 'modified'" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortDir === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                  </svg>
+                </button>
+              </th>
+              <th scope="col" class="hidden px-6 py-3 md:table-cell">
+                <button
+                  class="inline-flex items-center gap-1 font-medium uppercase hover:text-gray-900 dark:hover:text-white"
+                  @click="handleSort('owner')"
+                >
+                  Owner
+                  <svg v-if="sortField === 'owner'" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortDir === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                  </svg>
+                </button>
+              </th>
+              <th scope="col" class="w-16 px-6 py-3">
+                <span class="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in rows"
+              :key="row.name"
+              class="cursor-pointer border-b bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              @click="openRow(row)"
+            >
+              <!-- Name -->
+              <td class="px-6 py-4">
+                <span class="font-medium text-gray-900 dark:text-white">{{ row.name }}</span>
+              </td>
+
+              <!-- Modified -->
+              <td class="hidden px-6 py-4 sm:table-cell">
+                <span class="text-sm text-gray-500 dark:text-gray-400" :title="row.modified">
+                  {{ formatDate(row.modified) }}
+                </span>
+              </td>
+
+              <!-- Owner -->
+              <td class="hidden px-6 py-4 md:table-cell">
+                <div class="flex items-center gap-2">
+                  <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                    {{ formatOwner(row.owner).charAt(0).toUpperCase() }}
+                  </div>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">{{ formatOwner(row.owner) }}</span>
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td class="w-16 px-6 py-4" @click.stop>
+                <button
+                  class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white"
+                  title="Open in Desk"
+                  @click="openInDesk($event, row.name)"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="rows.length > 0" class="flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <span class="text-sm text-gray-700 dark:text-gray-400">
+        Page <span class="font-semibold text-gray-900 dark:text-white">{{ page }}</span>
+        &middot; {{ rows.length }} record{{ rows.length !== 1 ? 's' : '' }}
+      </span>
+
+      <nav>
+        <ul class="inline-flex -space-x-px text-sm">
+          <li>
+            <button
+              class="ms-0 flex h-8 items-center justify-center rounded-s-lg border border-gray-300 bg-white px-3 leading-tight text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              :disabled="page <= 1"
+              @click="page--"
+            >
+              Previous
+            </button>
+          </li>
+          <li>
+            <span class="flex h-8 items-center justify-center border border-gray-300 bg-gray-50 px-3 leading-tight text-gray-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
+              {{ page }}
+            </span>
+          </li>
+          <li>
+            <button
+              class="flex h-8 items-center justify-center rounded-e-lg border border-gray-300 bg-white px-3 leading-tight text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+              :disabled="rows.length < pageSize"
+              @click="page++"
+            >
+              Next
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   </div>
 </template>

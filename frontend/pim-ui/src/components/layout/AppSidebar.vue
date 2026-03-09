@@ -24,12 +24,12 @@ function handleNavigate(path: string): void {
 </script>
 
 <template>
-  <aside class="flex w-64 flex-col border-r border-pim-border bg-pim-surface">
-    <div class="flex h-16 items-center gap-2 border-b border-pim-border px-6">
+  <aside class="flex w-64 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div class="flex h-16 items-center gap-2 border-b border-gray-200 dark:border-gray-700 px-6">
       <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
         P
       </div>
-      <span class="text-lg font-semibold text-pim-text">
+      <span class="text-lg font-semibold text-gray-900 dark:text-white">
         {{ t('app.title') }}
       </span>
     </div>
@@ -42,7 +42,7 @@ function handleNavigate(path: string): void {
         :class="
           currentPath === item.path
             ? 'bg-primary-50 text-primary-700'
-            : 'text-pim-muted hover:bg-gray-50 hover:text-pim-text'
+            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
         "
         @click="handleNavigate(item.path)"
       >

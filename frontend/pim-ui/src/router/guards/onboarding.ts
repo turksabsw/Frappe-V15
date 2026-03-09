@@ -89,7 +89,7 @@ export async function onboardingGuard(
       query: { step: String(store.currentWizardStep || 1) },
     }
   } catch {
-    // On error (network failure, session expired), redirect to login
-    return '/login'
+    // On error (network failure, session expired), redirect to login page
+    return { path: '/login' }
   }
 }

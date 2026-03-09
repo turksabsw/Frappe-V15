@@ -460,10 +460,10 @@ defineExpose({ isValid })
   <div class="space-y-6">
     <!-- Category Source Selection -->
     <div>
-      <label class="mb-3 block text-sm font-medium text-pim-text">
+      <label class="mb-3 block text-sm font-medium text-gray-900 dark:text-white">
         Category Source
       </label>
-      <p class="mb-3 text-xs text-pim-muted">
+      <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
         How would you like to set up your product categories?
       </p>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -473,15 +473,15 @@ defineExpose({ isValid })
           class="flex items-start gap-3 rounded-lg border p-3 text-left transition-all duration-200"
           :class="
             form.category_source === source.value
-              ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50/30'
-              : 'border-pim-border hover:border-gray-300'
+              ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50/30 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-gray-300'
           "
           @click="selectSource(source.value)"
         >
           <span class="text-xl" v-html="source.icon" />
           <div class="flex-1">
-            <p class="text-sm font-medium text-pim-text">{{ source.label }}</p>
-            <p class="mt-0.5 text-xs text-pim-muted">{{ source.description }}</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ source.label }}</p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ source.description }}</p>
           </div>
           <div v-if="form.category_source === source.value" class="flex-shrink-0">
             <svg class="h-5 w-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,41 +497,41 @@ defineExpose({ isValid })
       v-if="showCategoryTree && totalCategories > 0"
       class="grid grid-cols-2 gap-3"
     >
-      <div class="rounded-lg border border-pim-border bg-pim-surface p-3 text-center">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ totalCategories }}</p>
-        <p class="text-xs text-pim-muted">Categories</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Categories</p>
       </div>
-      <div class="rounded-lg border border-pim-border bg-pim-surface p-3 text-center">
+      <div class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-center">
         <p class="text-lg font-semibold text-primary-600">{{ maxDepth }}</p>
-        <p class="text-xs text-pim-muted">Max Depth</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Max Depth</p>
       </div>
     </div>
 
     <!-- Category Tree Editor -->
     <div v-if="showCategoryTree">
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Category Tree
       </label>
-      <p class="mb-3 text-xs text-pim-muted">
+      <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
         Build or modify your product category hierarchy. Click a category to expand and add subcategories.
       </p>
 
       <!-- Tree Display -->
       <div
         v-if="(form.category_data ?? []).length > 0"
-        class="mb-3 rounded-lg border border-pim-border"
+        class="mb-3 rounded-lg border border-gray-300 dark:border-gray-600"
       >
         <template v-for="node in form.category_data" :key="node.name">
           <!-- Level 0 Node -->
-          <div class="border-b border-pim-border last:border-b-0">
+          <div class="border-b border-gray-300 dark:border-gray-600 last:border-b-0">
             <div
-              class="flex items-center justify-between px-3 py-2 transition-colors hover:bg-pim-surface"
+              class="flex items-center justify-between px-3 py-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <div class="flex items-center gap-2">
                 <button
                   v-if="node.children && node.children.length > 0"
                   type="button"
-                  class="text-pim-muted transition-transform"
+                  class="text-gray-500 dark:text-gray-400 transition-transform"
                   :class="{ 'rotate-90': expandedNodes.has(node.name) }"
                   @click="toggleNode(node.name)"
                 >
@@ -541,21 +541,21 @@ defineExpose({ isValid })
                 </button>
                 <span v-else class="w-4" />
                 <span
-                  class="cursor-pointer text-sm font-medium text-pim-text"
+                  class="cursor-pointer text-sm font-medium text-gray-900 dark:text-white"
                   @click="toggleNode(node.name)"
                 >
                   {{ node.label }}
                 </span>
                 <span
                   v-if="node.is_group"
-                  class="text-[10px] text-pim-muted"
+                  class="text-[10px] text-gray-500 dark:text-gray-400"
                 >
                   ({{ (node.children ?? []).length }})
                 </span>
               </div>
               <button
                 type="button"
-                class="text-pim-muted transition-colors hover:text-red-500"
+                class="text-gray-500 dark:text-gray-400 transition-colors hover:text-red-500"
                 @click="removeCategory(node.name)"
               >
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -565,15 +565,15 @@ defineExpose({ isValid })
             </div>
 
             <!-- Level 1 Children -->
-            <div v-if="expandedNodes.has(node.name)" class="border-t border-pim-border bg-pim-surface/50">
+            <div v-if="expandedNodes.has(node.name)" class="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/50">
               <template v-for="child in (node.children ?? [])" :key="child.name">
-                <div class="border-b border-pim-border/50 last:border-b-0">
+                <div class="border-b border-gray-300 dark:border-gray-600/50 last:border-b-0">
                   <div class="flex items-center justify-between px-3 py-1.5 pl-9">
                     <div class="flex items-center gap-2">
                       <button
                         v-if="child.children && child.children.length > 0"
                         type="button"
-                        class="text-pim-muted transition-transform"
+                        class="text-gray-500 dark:text-gray-400 transition-transform"
                         :class="{ 'rotate-90': expandedNodes.has(child.name) }"
                         @click="toggleNode(child.name)"
                       >
@@ -583,21 +583,21 @@ defineExpose({ isValid })
                       </button>
                       <span v-else class="w-3.5" />
                       <span
-                        class="cursor-pointer text-xs text-pim-text"
+                        class="cursor-pointer text-xs text-gray-900 dark:text-white"
                         @click="toggleNode(child.name)"
                       >
                         {{ child.label }}
                       </span>
                       <span
                         v-if="child.children && child.children.length > 0"
-                        class="text-[10px] text-pim-muted"
+                        class="text-[10px] text-gray-500 dark:text-gray-400"
                       >
                         ({{ child.children.length }})
                       </span>
                     </div>
                     <button
                       type="button"
-                      class="text-pim-muted transition-colors hover:text-red-500"
+                      class="text-gray-500 dark:text-gray-400 transition-colors hover:text-red-500"
                       @click="removeCategory(child.name)"
                     >
                       <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -609,17 +609,17 @@ defineExpose({ isValid })
                   <!-- Level 2 Children -->
                   <div
                     v-if="expandedNodes.has(child.name) && child.children && child.children.length > 0"
-                    class="border-t border-pim-border/30 bg-white/50"
+                    class="border-t border-gray-300 dark:border-gray-600/30 bg-white/50 dark:bg-gray-800/30"
                   >
                     <div
                       v-for="grandchild in child.children"
                       :key="grandchild.name"
-                      class="flex items-center justify-between border-b border-pim-border/30 px-3 py-1 pl-16 last:border-b-0"
+                      class="flex items-center justify-between border-b border-gray-300 dark:border-gray-600/30 px-3 py-1 pl-16 last:border-b-0"
                     >
-                      <span class="text-xs text-pim-muted">{{ grandchild.label }}</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">{{ grandchild.label }}</span>
                       <button
                         type="button"
-                        class="text-pim-muted transition-colors hover:text-red-500"
+                        class="text-gray-500 dark:text-gray-400 transition-colors hover:text-red-500"
                         @click="removeCategory(grandchild.name)"
                       >
                         <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -638,20 +638,20 @@ defineExpose({ isValid })
                       <input
                         v-model="newSubcategoryInputs[child.name]"
                         type="text"
-                        class="flex-1 rounded border border-pim-border bg-white px-2 py-1 text-xs text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        class="block flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
                         placeholder="Add subcategory..."
                         @keydown="handleSubcategoryKeydown($event, child.name)"
                       />
                       <button
                         type="button"
-                        class="rounded border border-primary-500 bg-primary-50 px-2 py-1 text-xs text-primary-700 hover:bg-primary-100"
+                        class="rounded border border-primary-500 bg-primary-50 dark:bg-primary-900/30 px-2 py-1 text-xs text-primary-700 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50"
                         @click="addSubcategory(child.name)"
                       >
                         +
                       </button>
                     </div>
                   </div>
-                </template>
+                </div>
               </template>
 
               <!-- Add Subcategory (Level 1) -->
@@ -660,7 +660,7 @@ defineExpose({ isValid })
                   <input
                     v-model="newSubcategoryInputs[node.name]"
                     type="text"
-                    class="flex-1 rounded border border-pim-border bg-white px-2 py-1 text-xs text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    class="block flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2 text-xs text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
                     placeholder="Add subcategory..."
                     @keydown="handleSubcategoryKeydown($event, node.name)"
                   />
@@ -681,9 +681,9 @@ defineExpose({ isValid })
       <!-- Empty Tree State -->
       <div
         v-else
-        class="mb-3 rounded-lg border border-dashed border-pim-border p-4 text-center"
+        class="mb-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-center"
       >
-        <p class="text-sm text-pim-muted">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           No categories yet. Add your first category below.
         </p>
       </div>
@@ -693,13 +693,13 @@ defineExpose({ isValid })
         <input
           v-model="newCategoryName"
           type="text"
-          class="flex-1 rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           placeholder="New top-level category name..."
           @keydown="handleCategoryKeydown"
         />
         <button
           type="button"
-          class="rounded-lg border border-primary-500 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100"
+          class="rounded-lg border border-primary-500 bg-primary-50 dark:bg-primary-900/30 px-3 py-2 text-sm font-medium text-primary-700 dark:text-primary-400 transition-colors hover:bg-primary-100 dark:hover:bg-primary-900/50"
           @click="addTopLevelCategory"
         >
           Add
@@ -710,15 +710,15 @@ defineExpose({ isValid })
     <!-- Import / GPC Info Messages -->
     <div
       v-if="form.category_source === 'import'"
-      class="rounded-lg border border-blue-200 bg-blue-50 p-4"
+      class="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4"
     >
       <div class="flex items-start gap-2">
-        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div>
-          <p class="text-sm font-medium text-blue-800">Import categories later</p>
-          <p class="mt-1 text-xs text-blue-700">
+          <p class="text-sm font-medium text-blue-800 dark:text-blue-300">Import categories later</p>
+          <p class="mt-1 text-xs text-blue-700 dark:text-blue-400">
             After completing the onboarding wizard, you can import categories from a CSV file
             via Settings &gt; Taxonomy &gt; Import Categories. Your categories will be
             created as a hierarchical tree structure.
@@ -729,15 +729,15 @@ defineExpose({ isValid })
 
     <div
       v-if="form.category_source === 'gpc'"
-      class="rounded-lg border border-blue-200 bg-blue-50 p-4"
+      class="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4"
     >
       <div class="flex items-start gap-2">
-        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div>
-          <p class="text-sm font-medium text-blue-800">GS1 Global Product Classification</p>
-          <p class="mt-1 text-xs text-blue-700">
+          <p class="text-sm font-medium text-blue-800 dark:text-blue-300">GS1 Global Product Classification</p>
+          <p class="mt-1 text-xs text-blue-700 dark:text-blue-400">
             GPC categories will be loaded from the GS1 standard after onboarding.
             This provides a standardized, globally recognized category hierarchy
             ideal for retail and e-commerce products.
@@ -748,23 +748,23 @@ defineExpose({ isValid })
 
     <!-- Brand Names -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Brand Names
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
         Add brands that you carry or manufacture. These will be available for product assignment.
       </p>
       <div class="flex gap-2">
         <input
           v-model="newBrandName"
           type="text"
-          class="flex-1 rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="block flex-1 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
           placeholder="e.g., Nike, Apple, Samsung"
           @keydown="handleBrandKeydown"
         />
         <button
           type="button"
-          class="rounded-lg border border-primary-500 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100"
+          class="rounded-lg border border-primary-500 bg-primary-50 dark:bg-primary-900/30 px-3 py-2 text-sm font-medium text-primary-700 dark:text-primary-400 transition-colors hover:bg-primary-100 dark:hover:bg-primary-900/50"
           @click="addBrand"
         >
           Add
@@ -775,7 +775,7 @@ defineExpose({ isValid })
         <span
           v-for="brand in form.brand_names"
           :key="brand"
-          class="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700"
+          class="inline-flex items-center gap-1 rounded-full bg-primary-50 dark:bg-primary-900/30 px-2.5 py-1 text-xs font-medium text-primary-700 dark:text-primary-400"
         >
           {{ brand }}
           <button
@@ -792,11 +792,11 @@ defineExpose({ isValid })
     </div>
 
     <!-- Info callout -->
-    <div class="flex items-start gap-2 rounded-lg bg-pim-surface p-3">
-      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex items-start gap-2 rounded-lg bg-white dark:bg-gray-800 p-3">
+      <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p class="text-xs text-pim-muted">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
         Categories organize your products into a navigable hierarchy. Brands identify
         product manufacturers or labels. Both can be modified at any time after setup
         via Settings.

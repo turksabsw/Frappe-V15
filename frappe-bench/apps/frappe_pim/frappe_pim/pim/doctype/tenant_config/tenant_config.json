@@ -23,7 +23,6 @@
       "fieldname": "company_website",
       "fieldtype": "Data",
       "label": "Website URL",
-      "options": "URL",
       "description": "Company website address"
     },
     {

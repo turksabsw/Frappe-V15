@@ -324,7 +324,8 @@ def apply_transition(product, new_state, user=None, comment=None):
         # Get product document
         if isinstance(product, str):
             product_name = product
-            if not frappe.db.exists("Product Master", product_name):
+            # Product Master is a virtual DocType backed by Item
+            if not frappe.db.exists("Item", product_name):
                 return _error_result(product_name, "Product not found")
             product_doc = frappe.get_doc("Product Master", product_name)
         else:
@@ -346,8 +347,10 @@ def apply_transition(product, new_state, user=None, comment=None):
             )
 
         # Apply the transition
+        # Use db_update instead of save to avoid global_search issues
+        # with uninitialized child tables on the virtual Product Master
         product_doc.workflow_state = new_state
-        product_doc.save()
+        product_doc.db_update()
 
         # Log the transition
         _log_transition(
@@ -408,7 +411,7 @@ def get_product_workflow_status(product):
         # Get product document
         if isinstance(product, str):
             product_name = product
-            if not frappe.db.exists("Product Master", product_name):
+            if not frappe.db.exists("Item", product_name):
                 return _empty_workflow_status(product_name)
             product_doc = frappe.get_doc("Product Master", product_name)
         else:

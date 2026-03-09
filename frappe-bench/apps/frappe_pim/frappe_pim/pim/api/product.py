@@ -189,17 +189,22 @@ def get_product_detail(name, include_attributes=True, include_media=True, includ
     product = {
         "name": doc.name,
         "product_name": doc.product_name,
-        "product_code": doc.product_code,
-        "status": doc.status,
-        "short_description": doc.short_description,
+        "product_code": getattr(doc, "product_code", doc.name),
+        "status": getattr(doc, "status", "Draft"),
+        "short_description": getattr(doc, "short_description", None),
         "long_description": doc.get("long_description"),
-        "product_family": doc.product_family,
-        "completeness_score": doc.completeness_score,
+        "product_family": getattr(doc, "product_family", None),
+        "product_type": getattr(doc, "product_type", None),
+        # category: form uses 'category', backend stores as 'product_category'
+        "category": getattr(doc, "product_category", None),
+        "brand": getattr(doc, "brand", None),
+        "has_variants": getattr(doc, "has_variants", False),
+        "completeness_score": getattr(doc, "completeness_score", 0),
         "image": doc.get("image"),
         "creation": doc.creation.isoformat() if doc.creation else None,
         "modified": doc.modified.isoformat() if doc.modified else None,
         "owner": doc.owner,
-        "modified_by": doc.modified_by
+        "modified_by": doc.modified_by,
     }
 
     # Convert string booleans from API calls
@@ -227,35 +232,20 @@ def create_product(
     product_name,
     product_code=None,
     product_family=None,
+    product_type=None,
+    category=None,
+    brand=None,
     status="Draft",
     short_description=None,
     long_description=None,
+    has_variants=None,
     attributes=None,
-    image=None
+    attribute_values=None,
+    media=None,
+    image=None,
+    **kwargs
 ):
-    """Create a new product.
-
-    Args:
-        product_name: Display name for the product (required)
-        product_code: Unique product code/SKU (auto-generated if not provided)
-        product_family: Link to Product Family
-        status: Initial status (default: Draft)
-        short_description: Brief product description
-        long_description: Full product description (HTML supported)
-        attributes: JSON dict of attribute_code -> value mappings
-        image: Primary product image URL/path
-
-    Returns:
-        dict: Created product data with name and key fields
-
-    Example:
-        >>> result = create_product(
-        ...     product_name="Widget Pro",
-        ...     product_family="Electronics",
-        ...     attributes={"color": "Blue", "size": "Large"}
-        ... )
-        >>> print(result["name"])
-    """
+    """Create a new product."""
     if not frappe.has_permission("Product Master", "create"):
         frappe.throw(_("Not permitted to create products"), frappe.PermissionError)
 
@@ -267,39 +257,38 @@ def create_product(
     doc_data = {
         "doctype": "Product Master",
         "product_name": product_name,
-        "status": status
+        "status": status or "Draft",
     }
 
     if product_code:
         doc_data["product_code"] = product_code
-
-    if product_family:
-        # Validate product family exists
-        if not frappe.db.exists("Product Family", product_family):
-            frappe.throw(
-                _("Product Family '{0}' does not exist").format(product_family),
-                title=_("Invalid Product Family")
-            )
+    if product_family and frappe.db.exists("Product Family", product_family):
         doc_data["product_family"] = product_family
-
+    if product_type and frappe.db.exists("PIM Product Type", product_type):
+        doc_data["product_type"] = product_type
+    # category in form maps to product_category in Product Master
+    if category:
+        doc_data["product_category"] = category
+    if brand:
+        doc_data["brand"] = brand
     if short_description:
         doc_data["short_description"] = short_description
-
     if long_description:
         doc_data["long_description"] = long_description
-
+    if has_variants is not None:
+        doc_data["has_variants"] = has_variants
     if image:
         doc_data["image"] = image
 
     # Create document via Virtual DocType (creates ERPNext Item under the hood)
     try:
         doc = frappe.get_doc(doc_data)
-        doc.insert()
+        doc.insert(ignore_permissions=True)
 
         # Add attribute values if provided
         if attributes:
             _set_product_attributes(doc, attributes)
-            doc.save()
+            doc.save(ignore_permissions=True)
 
         frappe.db.commit()
 
@@ -307,10 +296,10 @@ def create_product(
             "success": True,
             "name": doc.name,
             "product_name": doc.product_name,
-            "product_code": doc.product_code,
-            "status": doc.status,
-            "product_family": doc.product_family,
-            "completeness_score": doc.completeness_score
+            "product_code": getattr(doc, "product_code", doc.name),
+            "status": getattr(doc, "status", status),
+            "product_family": getattr(doc, "product_family", None),
+            "product_type": getattr(doc, "product_type", None),
         }
 
     except frappe.DuplicateEntryError:
@@ -335,37 +324,20 @@ def update_product(
     product_name=None,
     product_code=None,
     product_family=None,
+    product_type=None,
+    category=None,
+    brand=None,
     status=None,
     short_description=None,
     long_description=None,
+    has_variants=None,
     attributes=None,
-    image=None
+    attribute_values=None,
+    media=None,
+    image=None,
+    **kwargs
 ):
-    """Update an existing product.
-
-    Only provided fields will be updated. Pass None to skip a field.
-
-    Args:
-        name: Product Master name (document ID) - required
-        product_name: New display name
-        product_code: New product code/SKU
-        product_family: New Product Family link
-        status: New status
-        short_description: New short description
-        long_description: New long description
-        attributes: JSON dict of attribute_code -> value mappings to update
-        image: New primary image URL/path
-
-    Returns:
-        dict: Updated product data
-
-    Example:
-        >>> result = update_product(
-        ...     name="PROD-001",
-        ...     status="Active",
-        ...     attributes={"color": "Red"}
-        ... )
-    """
+    """Update an existing product."""
     if not frappe.has_permission("Product Master", "write"):
         frappe.throw(_("Not permitted to update products"), frappe.PermissionError)
 
@@ -378,50 +350,47 @@ def update_product(
     if attributes and isinstance(attributes, str):
         attributes = json.loads(attributes)
 
-    # Update fields if provided
     if product_name is not None:
         doc.product_name = product_name
-
     if product_code is not None:
         doc.product_code = product_code
-
     if product_family is not None:
-        if product_family and not frappe.db.exists("Product Family", product_family):
-            frappe.throw(
-                _("Product Family '{0}' does not exist").format(product_family),
-                title=_("Invalid Product Family")
-            )
-        doc.product_family = product_family
-
+        if not product_family or frappe.db.exists("Product Family", product_family):
+            doc.product_family = product_family
+    if product_type is not None:
+        if not product_type or frappe.db.exists("PIM Product Type", product_type):
+            doc.product_type = product_type
+    if category is not None:
+        doc.product_category = category
+    if brand is not None:
+        doc.brand = brand
     if status is not None:
         doc.status = status
-
     if short_description is not None:
         doc.short_description = short_description
-
     if long_description is not None:
         doc.long_description = long_description
-
+    if has_variants is not None:
+        doc.has_variants = has_variants
     if image is not None:
         doc.image = image
 
-    # Update attributes if provided
     if attributes:
         _set_product_attributes(doc, attributes)
 
     try:
-        doc.save()
+        doc.save(ignore_permissions=True)
         frappe.db.commit()
 
         return {
             "success": True,
             "name": doc.name,
             "product_name": doc.product_name,
-            "product_code": doc.product_code,
-            "status": doc.status,
-            "product_family": doc.product_family,
-            "completeness_score": doc.completeness_score,
-            "modified": doc.modified.isoformat() if doc.modified else None
+            "product_code": getattr(doc, "product_code", doc.name),
+            "status": getattr(doc, "status", None),
+            "product_family": getattr(doc, "product_family", None),
+            "product_type": getattr(doc, "product_type", None),
+            "modified": doc.modified.isoformat() if doc.modified else None,
         }
 
     except frappe.DuplicateEntryError:

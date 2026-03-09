@@ -96,14 +96,14 @@ function closeMobile(): void {
 <template>
   <!-- Desktop / Tablet: Always-visible right panel -->
   <aside
-    class="hidden flex-col border-l border-gray-200 bg-gray-50 lg:flex lg:w-[45%]"
+    class="hidden flex-col border-l border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 lg:flex lg:w-[45%]"
     aria-label="Live preview panel"
   >
     <!-- Panel Header -->
-    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
       <div class="flex items-center gap-2">
         <svg
-          class="h-4 w-4 text-pim-muted"
+          class="h-4 w-4 text-gray-500 dark:text-gray-400"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -122,9 +122,9 @@ function closeMobile(): void {
             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
           />
         </svg>
-        <h3 class="text-sm font-medium text-pim-text">{{ stepTitle }}</h3>
+        <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ stepTitle }}</h3>
       </div>
-      <span class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+      <span class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-900 dark:text-primary-300">
         Live
       </span>
     </div>
@@ -134,7 +134,7 @@ function closeMobile(): void {
       <!-- Loading State -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-12">
         <div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-        <p class="text-sm text-pim-muted">Updating preview...</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Updating preview...</p>
       </div>
 
       <!-- Preview Content (via slot) -->
@@ -158,8 +158,8 @@ function closeMobile(): void {
             d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
           />
         </svg>
-        <p class="text-sm font-medium text-pim-muted">Preview will appear here</p>
-        <p class="mt-1 text-xs text-gray-400">Fill in the form to see a live preview</p>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Preview will appear here</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Fill in the form to see a live preview</p>
       </div>
     </div>
   </aside>
@@ -216,17 +216,17 @@ function closeMobile(): void {
       />
 
       <!-- Bottom Sheet Panel -->
-      <div class="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-hidden rounded-t-2xl bg-white shadow-2xl">
+      <div class="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-hidden rounded-t-2xl bg-white shadow-2xl dark:bg-gray-800">
         <!-- Drag Handle -->
         <div class="flex justify-center py-2">
-          <div class="h-1 w-10 rounded-full bg-gray-300" />
+          <div class="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
         </div>
 
         <!-- Mobile Panel Header -->
-        <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <div class="flex items-center gap-2">
             <svg
-              class="h-4 w-4 text-pim-muted"
+              class="h-4 w-4 text-gray-500 dark:text-gray-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -245,10 +245,10 @@ function closeMobile(): void {
                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
               />
             </svg>
-            <h3 class="text-sm font-medium text-pim-text">{{ stepTitle }}</h3>
+            <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ stepTitle }}</h3>
           </div>
           <button
-            class="rounded-lg p-1.5 text-pim-muted hover:bg-gray-100 hover:text-pim-text"
+            class="rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:text-white"
             aria-label="Close preview"
             @click="closeMobile"
           >
@@ -263,7 +263,7 @@ function closeMobile(): void {
           <!-- Loading State -->
           <div v-if="loading" class="flex flex-col items-center justify-center py-8">
             <div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-            <p class="text-sm text-pim-muted">Updating preview...</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Updating preview...</p>
           </div>
 
           <!-- Preview Content -->
@@ -275,7 +275,7 @@ function closeMobile(): void {
 
           <!-- Empty State -->
           <div v-else class="flex flex-col items-center justify-center py-8 text-center">
-            <p class="text-sm text-pim-muted">Fill in the form to see a live preview</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Fill in the form to see a live preview</p>
           </div>
         </div>
       </div>

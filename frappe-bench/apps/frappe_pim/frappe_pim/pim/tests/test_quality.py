@@ -118,7 +118,7 @@ class TestCompletenessScoreCalculation(unittest.TestCase):
             "doctype": "PIM Attribute",
             "attribute_code": f"req_attr_{random_string(6).lower()}",
             "attribute_name": f"Required Attr {random_string(4)}",
-            "data_type": "Data"
+            "data_type": "Text"
         })
         attr.insert(ignore_permissions=True)
         self.track_document("PIM Attribute", attr.name)
@@ -128,9 +128,9 @@ class TestCompletenessScoreCalculation(unittest.TestCase):
             "doctype": "Product Family",
             "family_name": f"Test Family {random_string(4)}",
             "is_group": 0,
-            "attribute_templates": [{
+            "attributes": [{
                 "attribute": attr.name,
-                "is_required": 1
+                "is_required_in_family": 1
             }]
         })
         family.insert(ignore_permissions=True)

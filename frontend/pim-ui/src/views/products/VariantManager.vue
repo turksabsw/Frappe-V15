@@ -320,13 +320,13 @@ watch(() => props.productFamily, () => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h3 class="text-lg font-medium text-pim-text">Variant Management</h3>
-        <p class="text-sm text-pim-muted">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Variant Management</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           {{ store.currentVariants.length }} variant{{ store.currentVariants.length !== 1 ? 's' : '' }} defined
         </p>
       </div>
       <button
-        class="btn-primary inline-flex items-center gap-2 text-sm"
+        class="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
         @click="showGenerator = !showGenerator"
       >
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,28 +338,28 @@ watch(() => props.productFamily, () => {
 
     <!-- Variant Generator Panel -->
     <div v-if="showGenerator" class="card border-2 border-primary-100">
-      <h4 class="mb-4 font-medium text-pim-text">Variant Generator</h4>
-      <p class="mb-4 text-sm text-pim-muted">
+      <h4 class="mb-4 font-medium text-gray-900 dark:text-white">Variant Generator</h4>
+      <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         Define variant axes (e.g., Color, Size) and their values to automatically generate variant combinations.
       </p>
 
       <!-- Available axes -->
       <div class="mb-4">
-        <label class="mb-2 block text-sm font-medium text-pim-text">Available Axes</label>
-        <div v-if="axesLoading" class="text-sm text-pim-muted">
+        <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">Available Axes</label>
+        <div v-if="axesLoading" class="text-sm text-gray-500 dark:text-gray-400">
           {{ t('common.loading') }}
         </div>
-        <div v-else-if="availableAxes.length === 0" class="text-sm text-pim-muted">
+        <div v-else-if="availableAxes.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
           No variant axes defined. Set attributes as variant axes in the Product Family or Attribute configuration.
         </div>
         <div v-else class="flex flex-wrap gap-2">
           <button
             v-for="attr in availableAxes"
             :key="attr.name"
-            class="inline-flex items-center gap-1 rounded-lg border border-pim-border px-3 py-1.5 text-sm transition-colors hover:border-primary-300 hover:bg-primary-50"
+            class="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm transition-colors hover:border-primary-300 hover:bg-primary-50"
             :class="{
               'border-primary-500 bg-primary-50 text-primary-700': configuredAxes.some(a => a.attribute === attr.name),
-              'text-pim-text': !configuredAxes.some(a => a.attribute === attr.name),
+              'text-gray-900 dark:text-white': !configuredAxes.some(a => a.attribute === attr.name),
             }"
             :disabled="configuredAxes.some(a => a.attribute === attr.name)"
             @click="addAxis(attr)"
@@ -386,12 +386,12 @@ watch(() => props.productFamily, () => {
         <div
           v-for="(axis, axisIndex) in configuredAxes"
           :key="axis.attribute"
-          class="rounded-lg border border-pim-border p-4"
+          class="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
         >
           <div class="mb-3 flex items-center justify-between">
-            <h5 class="font-medium text-pim-text">{{ axis.attribute_name }}</h5>
+            <h5 class="font-medium text-gray-900 dark:text-white">{{ axis.attribute_name }}</h5>
             <button
-              class="btn-ghost p-1 text-red-500 hover:text-red-700"
+              class="rounded-lg p-2.5 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700"
               title="Remove axis"
               @click="removeAxis(axisIndex)"
             >
@@ -430,7 +430,7 @@ watch(() => props.productFamily, () => {
               @keydown="handleAxisValueKeydown($event, axisIndex)"
             />
             <button
-              class="btn-secondary text-sm"
+              class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
               :disabled="!axis.inputValue.trim()"
               @click="addAxisValue(axisIndex)"
             >
@@ -443,27 +443,27 @@ watch(() => props.productFamily, () => {
       <!-- Combination Preview -->
       <div v-if="combinationCount > 0" class="mt-4">
         <div class="mb-2 flex items-center justify-between">
-          <h5 class="text-sm font-medium text-pim-text">
+          <h5 class="text-sm font-medium text-gray-900 dark:text-white">
             Preview: {{ combinationCount }} combination{{ combinationCount !== 1 ? 's' : '' }}
           </h5>
         </div>
-        <div class="max-h-48 overflow-auto rounded-lg border border-pim-border">
+        <div class="max-h-48 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
           <table class="w-full text-sm">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase text-pim-muted">#</th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">#</th>
                 <th
                   v-for="axis in configuredAxes.filter(a => a.values.length > 0)"
                   :key="axis.attribute"
-                  class="px-3 py-2 text-left text-xs font-medium uppercase text-pim-muted"
+                  class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400"
                 >
                   {{ axis.attribute_name }}
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-pim-border">
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               <tr v-for="(combo, index) in combinationPreview.slice(0, 50)" :key="index">
-                <td class="px-3 py-1.5 text-pim-muted">{{ index + 1 }}</td>
+                <td class="px-3 py-1.5 text-gray-500 dark:text-gray-400">{{ index + 1 }}</td>
                 <td
                   v-for="(value, key) in combo"
                   :key="key"
@@ -474,7 +474,7 @@ watch(() => props.productFamily, () => {
               </tr>
             </tbody>
           </table>
-          <p v-if="combinationCount > 50" class="border-t border-pim-border bg-gray-50 px-3 py-2 text-center text-xs text-pim-muted">
+          <p v-if="combinationCount > 50" class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 px-3 py-2 text-center text-xs text-gray-500 dark:text-gray-400">
             Showing first 50 of {{ combinationCount }} combinations
           </p>
         </div>
@@ -483,7 +483,7 @@ watch(() => props.productFamily, () => {
       <!-- Generate button -->
       <div class="mt-4 flex items-center gap-3">
         <button
-          class="btn-primary"
+          class="inline-flex items-center rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
           :disabled="!canGenerate"
           @click="generateVariants"
         >
@@ -528,10 +528,10 @@ watch(() => props.productFamily, () => {
     <!-- Existing Variants -->
     <div class="card">
       <div class="mb-4 flex items-center justify-between">
-        <h4 class="font-medium text-pim-text">Existing Variants</h4>
+        <h4 class="font-medium text-gray-900 dark:text-white">Existing Variants</h4>
         <!-- Search -->
         <div v-if="store.currentVariants.length > 0" class="relative w-64">
-          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -545,44 +545,44 @@ watch(() => props.productFamily, () => {
 
       <!-- Empty state -->
       <div v-if="store.currentVariants.length === 0" class="py-8 text-center">
-        <svg class="mx-auto h-10 w-10 text-pim-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mx-auto h-10 w-10 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-        <p class="mt-2 text-sm text-pim-muted">No variants yet.</p>
-        <p class="text-xs text-pim-muted">
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No variants yet.</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
           Use the variant generator above to create variant combinations.
         </p>
       </div>
 
       <!-- Variant grid -->
-      <div v-else class="overflow-hidden rounded-lg border border-pim-border">
+      <div v-else class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
         <table class="w-full text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Variant
               </th>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 SKU
               </th>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Status
               </th>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Axis Values
               </th>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Completeness
               </th>
-              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Sync
               </th>
-              <th class="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-pim-muted">
+              <th class="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-pim-border">
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
             <tr
               v-for="variant in filteredVariants"
               :key="variant.name"
@@ -590,12 +590,12 @@ watch(() => props.productFamily, () => {
             >
               <!-- Variant name/code -->
               <td class="px-4 py-3">
-                <p class="font-medium text-pim-text">{{ variant.variant_name }}</p>
-                <p class="text-xs text-pim-muted">{{ variant.variant_code }}</p>
+                <p class="font-medium text-gray-900 dark:text-white">{{ variant.variant_name }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ variant.variant_code }}</p>
               </td>
 
               <!-- SKU -->
-              <td class="px-4 py-3 text-pim-muted">
+              <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
                 {{ variant.sku || '—' }}
               </td>
 
@@ -615,12 +615,12 @@ watch(() => props.productFamily, () => {
                   <span
                     v-for="(av, i) in variant.axis_values"
                     :key="i"
-                    class="inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs text-pim-text"
+                    class="inline-flex rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-900 dark:text-white"
                   >
                     {{ av.display_value || av.attribute_value }}
                   </span>
                 </div>
-                <span v-else class="text-xs text-pim-muted">—</span>
+                <span v-else class="text-xs text-gray-500 dark:text-gray-400">—</span>
               </td>
 
               <!-- Completeness -->
@@ -633,7 +633,7 @@ watch(() => props.productFamily, () => {
                       :style="{ width: `${variant.completeness_score ?? 0}%` }"
                     />
                   </div>
-                  <span class="text-xs text-pim-muted">{{ variant.completeness_score ?? 0 }}%</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ variant.completeness_score ?? 0 }}%</span>
                 </div>
               </td>
 
@@ -651,7 +651,7 @@ watch(() => props.productFamily, () => {
                 >
                   {{ variant.sync_status }}
                 </span>
-                <span v-else class="text-xs text-pim-muted">—</span>
+                <span v-else class="text-xs text-gray-500 dark:text-gray-400">—</span>
               </td>
 
               <!-- Actions -->
@@ -661,7 +661,7 @@ watch(() => props.productFamily, () => {
                     v-if="variant.erp_item"
                     :href="`/app/item/${variant.erp_item}`"
                     target="_blank"
-                    class="btn-ghost p-1.5 text-primary-600 hover:text-primary-700"
+                    class="rounded-lg p-2.5 text-sm text-primary-600 hover:bg-gray-100 hover:text-primary-700 dark:hover:bg-gray-700"
                     title="Open in ERPNext"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -669,7 +669,7 @@ watch(() => props.productFamily, () => {
                     </svg>
                   </a>
                   <button
-                    class="btn-ghost p-1.5 text-red-500 hover:text-red-700"
+                    class="rounded-lg p-2.5 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700"
                     title="Delete variant"
                     @click="confirmDeleteVariant(variant.name)"
                   >
@@ -686,7 +686,7 @@ watch(() => props.productFamily, () => {
         <!-- No results for search -->
         <div
           v-if="filteredVariants.length === 0 && store.currentVariants.length > 0"
-          class="border-t border-pim-border bg-gray-50 py-4 text-center text-sm text-pim-muted"
+          class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
         >
           No variants match "{{ variantSearch }}"
         </div>
@@ -701,12 +701,12 @@ watch(() => props.productFamily, () => {
         @click.self="cancelDeleteVariant"
       >
         <div class="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-          <h3 class="text-lg font-semibold text-pim-text">Delete Variant</h3>
-          <p class="mt-2 text-sm text-pim-muted">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Variant</h3>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Are you sure you want to delete this variant? If it is synced to ERPNext, the linked Item will not be deleted.
           </p>
           <div class="mt-6 flex justify-end gap-3">
-            <button class="btn-ghost" @click="cancelDeleteVariant">
+            <button class="rounded-lg p-2.5 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700" @click="cancelDeleteVariant">
               {{ t('common.cancel') }}
             </button>
             <button

@@ -1,40 +1,17 @@
 <script setup lang="ts">
 /**
- * WizardFooter - Navigation buttons for the onboarding wizard.
- *
- * Renders Back, Next, Skip, and Finish buttons with conditional visibility:
- * - Back button: hidden on step 1, shown on all other steps
- * - Skip button: shown only for skippable steps (9-11) after step 8
- * - Next button: shown on steps 1-11 (non-final steps)
- * - Finish/Launch button: shown on step 12 (final step)
- * - Loading spinner on primary button during API operations
- *
- * Also includes a "Skip Entire Wizard" link for users who want to
- * bypass onboarding entirely (shown on the first step only).
+ * WizardFooter - Flowbite-style navigation buttons for the onboarding wizard.
  */
 
-// ============================================================================
-// Props
-// ============================================================================
-
 export interface WizardFooterProps {
-  /** Whether the wizard is on the first step */
   isFirstStep: boolean
-  /** Whether the wizard is on the last step */
   isLastStep: boolean
-  /** Whether the current step can be skipped */
   canSkipStep: boolean
-  /** Whether an API operation is in progress */
   loading: boolean
-  /** Whether template application is in progress */
   isApplying?: boolean
-  /** Label for the primary (Next) button — overrides default */
   nextLabel?: string
-  /** Label for the Back button — overrides default */
   backLabel?: string
-  /** Label for the Skip button — overrides default */
   skipLabel?: string
-  /** Whether the primary button should be disabled (e.g., validation failed) */
   nextDisabled?: boolean
 }
 
@@ -46,77 +23,57 @@ const props = withDefaults(defineProps<WizardFooterProps>(), {
   nextDisabled: false,
 })
 
-// ============================================================================
-// Emits
-// ============================================================================
-
 const emit = defineEmits<{
-  /** Navigate to the next step */
   (e: 'next'): void
-  /** Navigate to the previous step */
   (e: 'back'): void
-  /** Skip the current step (skippable steps only) */
   (e: 'skip'): void
-  /** Skip the entire onboarding wizard */
   (e: 'skip-all'): void
 }>()
 
-// ============================================================================
-// Computed Labels
-// ============================================================================
-
-/** Resolved label for the primary action button */
 function getPrimaryLabel(): string {
   if (props.nextLabel) return props.nextLabel
   if (props.isLastStep) return 'Launch PIM'
   return 'Continue'
 }
 
-/** Resolved label for the back button */
 function getBackLabel(): string {
   if (props.backLabel) return props.backLabel
   return 'Back'
 }
 
-/** Resolved label for the skip button */
 function getSkipLabel(): string {
   if (props.skipLabel) return props.skipLabel
   return 'Skip this step'
 }
 
-/** Whether any action is in progress */
 function isDisabled(): boolean {
   return props.loading || props.isApplying
 }
 </script>
 
 <template>
-  <div class="wizard-footer mt-6 flex items-center justify-between">
+  <div class="flex items-center justify-between">
     <!-- Left Side: Back Button or Skip-All Link -->
     <div class="flex items-center gap-3">
-      <!-- Back Button (hidden on first step) -->
+      <!-- Back Button -->
       <button
         v-if="!isFirstStep"
-        class="btn-secondary"
+        type="button"
+        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
         :disabled="isDisabled()"
         @click="emit('back')"
       >
-        <svg
-          class="mr-1.5 h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        <svg class="me-2 h-4 w-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12l4-4m-4 4 4 4" />
         </svg>
         {{ getBackLabel() }}
       </button>
 
-      <!-- Skip Entire Wizard link (shown on first step only) -->
+      <!-- Skip Entire Wizard link (first step only) -->
       <button
         v-if="isFirstStep"
-        class="btn-ghost text-sm text-pim-muted hover:text-pim-text"
+        type="button"
+        class="text-sm font-medium text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-white"
         :disabled="isDisabled()"
         @click="emit('skip-all')"
       >
@@ -126,65 +83,68 @@ function isDisabled(): boolean {
 
     <!-- Right Side: Skip Step + Primary Button -->
     <div class="flex items-center gap-3">
-      <!-- Skip Step Button (only for skippable steps) -->
+      <!-- Skip Step Button -->
       <button
         v-if="canSkipStep"
-        class="btn-ghost text-sm"
+        type="button"
+        class="text-sm font-medium text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-white"
         :disabled="isDisabled()"
         @click="emit('skip')"
       >
         {{ getSkipLabel() }}
       </button>
 
-      <!-- Skip All link (non-first steps, subtle placement) -->
+      <!-- Skip All link (non-first steps) -->
       <button
         v-if="!isFirstStep"
-        class="btn-ghost text-xs text-pim-muted hover:text-pim-text"
+        type="button"
+        class="text-xs text-gray-400 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
         :disabled="isDisabled()"
         @click="emit('skip-all')"
       >
         Skip all
       </button>
 
-      <!-- Primary Action Button: Next or Launch -->
+      <!-- Primary Action Button -->
       <button
-        class="btn-primary"
+        type="button"
+        class="inline-flex items-center rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
         :disabled="isDisabled() || nextDisabled"
         @click="emit('next')"
       >
         <!-- Loading spinner -->
-        <span
-          v-if="loading || isApplying"
-          class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
-          aria-hidden="true"
-        />
-        {{ getPrimaryLabel() }}
-        <!-- Forward arrow (not shown on last step) -->
         <svg
-          v-if="!isLastStep && !loading && !isApplying"
-          class="ml-1.5 h-4 w-4"
+          v-if="loading || isApplying"
+          class="me-2 h-4 w-4 animate-spin fill-white text-gray-200 dark:text-gray-600"
+          viewBox="0 0 100 101"
           fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
           aria-hidden="true"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+          <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+        </svg>
+        {{ getPrimaryLabel() }}
+        <!-- Forward arrow -->
+        <svg
+          v-if="!isLastStep && !loading && !isApplying"
+          class="ms-2 h-4 w-4"
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m14 0-4 4m4-4-4-4" />
         </svg>
         <!-- Rocket icon on last step -->
         <svg
           v-if="isLastStep && !loading && !isApplying"
-          class="ml-1.5 h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+          class="ms-2 h-4 w-4"
           aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 003.46-1.25 11.33 11.33 0 01-3.46 1.25zm0 0a14.9 14.9 0 01-3.46 1.25m0 0a14.98 14.98 0 01-3.46-1.25m3.46 1.25v4.8m0-4.8a6 6 0 01-5.84-7.38m5.84 7.38a6 6 0 005.84-7.38"
-          />
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12H4m12 0-4 4m4-4-4-4m3-4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2" />
         </svg>
       </button>
     </div>

@@ -1233,7 +1233,7 @@ def _get_required_attributes(family):
             "Family Attribute Template",
             filters={
                 "parent": family,
-                "is_required": 1
+                "is_required_in_family": 1
             },
             pluck="attribute"
         )

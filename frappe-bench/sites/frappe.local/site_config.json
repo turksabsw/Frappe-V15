@@ -3,6 +3,7 @@
   "http://localhost:5173",
   "http://frappe.local:8000"
  ],
+ "allow_tests": true,
  "cors_allow_credentials": false,
  "cors_allow_headers": [
   "Authorization",

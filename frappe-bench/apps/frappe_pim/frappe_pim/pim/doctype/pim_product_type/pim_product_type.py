@@ -84,12 +84,13 @@ class PIMProductType(Document):
 
     def validate_allowed_families(self):
         """Validate allowed families configuration"""
-        if not self.allowed_families:
+        families = self._parse_allowed_families()
+        if not families:
             return
 
         # Validate that all referenced families exist and are active
-        for row in self.allowed_families:
-            family_name = getattr(row, "product_family", None) or getattr(row, "link_name", None)
+        for family_name in families:
+            family_name = family_name.strip()
             if not family_name:
                 continue
 
@@ -177,26 +178,22 @@ class PIMProductType(Document):
         fields.sort(key=lambda x: x.get("sort_order", 0))
         return fields
 
+    def _parse_allowed_families(self) -> List[str]:
+        """Parse allowed_families_text into a list of family names."""
+        text = getattr(self, "allowed_families_text", None) or ""
+        return [f.strip() for f in text.split(",") if f.strip()]
+
     def get_allowed_families(self) -> List[Dict]:
         """Get product families that can use this product type.
 
-        Reads from the allowed_families Table MultiSelect field.
+        Reads from the allowed_families_text field (comma-separated names).
         If no families are configured, returns an empty list (meaning all
         families are allowed by convention).
 
         Returns:
             List of dicts with family name, family_name, and enabled status
         """
-        if not self.allowed_families:
-            return []
-
-        family_names = []
-        for row in self.allowed_families:
-            # Table MultiSelect stores the link in a field named after the target DocType
-            family_name = getattr(row, "product_family", None) or getattr(row, "link_name", None)
-            if family_name:
-                family_names.append(family_name)
-
+        family_names = self._parse_allowed_families()
         if not family_names:
             return []
 
@@ -218,8 +215,7 @@ class PIMProductType(Document):
         Returns:
             List of Product Family names (strings)
         """
-        families = self.get_allowed_families()
-        return [f["name"] for f in families]
+        return self._parse_allowed_families()
 
     def validate_product(self, product_doc) -> Dict:
         """Validate a product document against this type's requirements.

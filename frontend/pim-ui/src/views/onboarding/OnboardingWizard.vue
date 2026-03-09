@@ -382,7 +382,7 @@ function handleStepClick(stepNumber: number): void {
       <div
         class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"
       />
-      <p class="text-pim-muted">Loading your onboarding progress...</p>
+      <p class="text-gray-500 dark:text-gray-400">Loading your onboarding progress...</p>
     </div>
 
     <!-- Main Wizard Layout: Split-Panel -->
@@ -393,7 +393,7 @@ function handleStepClick(stepNumber: number): void {
         <!-- ============================================================ -->
         <div class="flex w-full flex-col overflow-hidden lg:w-[55%]">
           <!-- Wizard Header: Progress bar, step indicators, title -->
-          <div class="flex-shrink-0 border-b border-gray-200 px-6 py-4">
+          <div class="flex-shrink-0 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
             <WizardHeader
               :current-step="wizard.currentStepNumber.value"
               :total-steps="wizard.totalSteps.value"
@@ -408,7 +408,7 @@ function handleStepClick(stepNumber: number): void {
           <!-- Error Banner -->
           <div
             v-if="wizard.error.value"
-            class="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+            class="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800 dark:bg-red-900/30"
           >
             <svg
               class="h-5 w-5 flex-shrink-0 text-red-500"
@@ -424,7 +424,7 @@ function handleStepClick(stepNumber: number): void {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p class="flex-1 text-sm text-red-700">{{ wizard.error.value }}</p>
+            <p class="flex-1 text-sm text-red-700 dark:text-red-400">{{ wizard.error.value }}</p>
             <div class="flex items-center gap-2">
               <button
                 v-if="canRetry"
@@ -479,7 +479,7 @@ function handleStepClick(stepNumber: number): void {
                     d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                   />
                 </svg>
-                <p class="text-sm font-medium text-pim-muted">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
                   {{ wizard.currentStepConfig.value?.title ?? 'Step' }} is being
                   prepared...
                 </p>
@@ -491,7 +491,7 @@ function handleStepClick(stepNumber: number): void {
           </div>
 
           <!-- Wizard Footer: Navigation buttons -->
-          <div class="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+          <div class="flex-shrink-0 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
             <WizardFooter
               :is-first-step="wizard.isFirstStep.value"
               :is-last-step="wizard.isLastStep.value"
@@ -523,7 +523,7 @@ function handleStepClick(stepNumber: number): void {
           />
           <!-- Fallback for steps without preview data -->
           <div v-else-if="!livePreview.previewData.value" class="flex items-center justify-center py-8">
-            <p class="text-sm text-pim-muted">Configure this step to see a preview</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Configure this step to see a preview</p>
           </div>
         </LivePreviewPanel>
       </div>
@@ -537,7 +537,7 @@ function handleStepClick(stepNumber: number): void {
       <div
         class="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent"
       />
-      <p class="text-pim-muted">Setting up your workspace...</p>
+      <p class="text-gray-500 dark:text-gray-400">Setting up your workspace...</p>
     </div>
   </OnboardingModal>
 </template>

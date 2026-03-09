@@ -439,7 +439,7 @@ export interface TenantConfig {
 }
 
 /** Tenant-level onboarding status */
-export type OnboardingStatus = 'not_started' | 'in_progress' | 'completed' | 'skipped'
+export type OnboardingStatus = 'not_started' | 'in_progress' | 'completed' | 'skipped' | 'error'
 
 // ============================================================================
 // Enum-Like Types (matching Tenant Config field options)
@@ -570,6 +570,8 @@ export interface OnboardingStatusResponse {
   template_applied: boolean
   progress_percent: number
   steps: WizardStepMetadata[]
+  /** Present when status is 'error' (e.g. backend exception) */
+  message?: string
 }
 
 /** Result from save_step API */

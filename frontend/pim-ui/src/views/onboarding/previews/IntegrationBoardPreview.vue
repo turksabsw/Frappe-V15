@@ -43,17 +43,17 @@ const INTEGRATION_COLORS: Record<string, {
   enabledText: string
   enabledBorder: string
 }> = {
-  erp_sync: { enabledBg: 'bg-blue-50', enabledText: 'text-blue-600', enabledBorder: 'border-blue-200' },
-  ai_enrichment: { enabledBg: 'bg-purple-50', enabledText: 'text-purple-600', enabledBorder: 'border-purple-200' },
-  gs1: { enabledBg: 'bg-green-50', enabledText: 'text-green-600', enabledBorder: 'border-green-200' },
-  mdm: { enabledBg: 'bg-amber-50', enabledText: 'text-amber-600', enabledBorder: 'border-amber-200' },
+  erp_sync: { enabledBg: 'bg-blue-50 dark:bg-blue-950', enabledText: 'text-blue-600 dark:text-blue-400', enabledBorder: 'border-blue-200 dark:border-blue-800' },
+  ai_enrichment: { enabledBg: 'bg-purple-50 dark:bg-purple-950', enabledText: 'text-purple-600 dark:text-purple-400', enabledBorder: 'border-purple-200 dark:border-purple-800' },
+  gs1: { enabledBg: 'bg-green-50 dark:bg-green-950', enabledText: 'text-green-600 dark:text-green-400', enabledBorder: 'border-green-200 dark:border-green-800' },
+  mdm: { enabledBg: 'bg-amber-50 dark:bg-amber-950', enabledText: 'text-amber-600 dark:text-amber-400', enabledBorder: 'border-amber-200 dark:border-amber-800' },
 }
 
 /** Default integration colors */
 const DEFAULT_COLORS = {
-  enabledBg: 'bg-gray-50',
-  enabledText: 'text-gray-600',
-  enabledBorder: 'border-gray-200',
+  enabledBg: 'bg-gray-50 dark:bg-gray-800',
+  enabledText: 'text-gray-600 dark:text-gray-400',
+  enabledBorder: 'border-gray-200 dark:border-gray-600',
 }
 
 /** Whether there are any integrations to display */
@@ -78,7 +78,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
     <div v-if="hasContent" class="flex items-center justify-center">
       <span
         class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
-        :class="data.total_enabled > 0 ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'"
+        :class="data.total_enabled > 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'"
       >
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -92,10 +92,10 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
       <div
         v-for="integration in data.integrations"
         :key="integration.id"
-        class="rounded-xl border bg-white p-4 transition-all duration-300"
+        class="rounded-xl border bg-white dark:bg-gray-700 p-4 transition-all duration-300"
         :class="integration.enabled
           ? [getColors(integration.id).enabledBorder, 'shadow-sm']
-          : 'border-gray-100 opacity-60'"
+          : 'border-gray-100 dark:border-gray-600 opacity-60'"
       >
         <div class="flex items-start gap-3">
           <!-- Integration Icon -->
@@ -103,7 +103,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
             class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-colors"
             :class="integration.enabled
               ? getColors(integration.id).enabledBg
-              : 'bg-gray-100'"
+              : 'bg-gray-100 dark:bg-gray-700'"
           >
             <svg
               class="h-5 w-5"
@@ -129,7 +129,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
             <div class="flex items-center gap-2">
               <h3
                 class="text-sm font-medium"
-                :class="integration.enabled ? 'text-pim-text' : 'text-gray-400'"
+                :class="integration.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400'"
               >
                 {{ integration.label }}
               </h3>
@@ -138,8 +138,8 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
               <span
                 class="rounded-full px-2 py-0.5 text-[10px] font-medium"
                 :class="integration.enabled
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-500'"
+                  ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
               >
                 {{ integration.enabled ? 'Enabled' : 'Disabled' }}
               </span>
@@ -147,7 +147,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
 
             <p
               class="mt-0.5 text-xs"
-              :class="integration.enabled ? 'text-pim-muted' : 'text-gray-300'"
+              :class="integration.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300'"
             >
               {{ integration.description }}
             </p>
@@ -155,23 +155,23 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
             <!-- Config Summary (when enabled and has config) -->
             <div
               v-if="integration.enabled && integration.config_summary"
-              class="mt-2 flex items-center gap-1.5 rounded-md bg-gray-50 px-2.5 py-1.5"
+              class="mt-2 flex items-center gap-1.5 rounded-md bg-gray-50 dark:bg-gray-800 px-2.5 py-1.5"
             >
               <svg class="h-3 w-3 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span class="text-[11px] text-pim-muted">{{ integration.config_summary }}</span>
+              <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ integration.config_summary }}</span>
             </div>
           </div>
 
           <!-- Toggle Visual -->
           <div
             class="mt-1 h-5 w-9 flex-shrink-0 rounded-full transition-colors"
-            :class="integration.enabled ? 'bg-green-400' : 'bg-gray-200'"
+            :class="integration.enabled ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-600'"
           >
             <div
-              class="h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+              class="h-5 w-5 rounded-full bg-white dark:bg-gray-700 shadow-sm transition-transform"
               :class="integration.enabled ? 'translate-x-4' : 'translate-x-0'"
             />
           </div>
@@ -185,7 +185,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
       class="flex flex-col items-center justify-center py-8 text-center"
     >
       <svg
-        class="mb-2 h-8 w-8 text-gray-300"
+        class="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -198,7 +198,7 @@ function getColors(id: string): { enabledBg: string; enabledText: string; enable
           d="M13 10V3L4 14h7v7l9-11h-7z"
         />
       </svg>
-      <p class="text-sm text-pim-muted">Configure integrations to see the status board</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Configure integrations to see the status board</p>
     </div>
   </div>
 </template>

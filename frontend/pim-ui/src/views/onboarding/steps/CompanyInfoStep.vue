@@ -1,18 +1,6 @@
 <script setup lang="ts">
 /**
- * CompanyInfoStep - First onboarding step for company information.
- *
- * Collects:
- * - Company name (required)
- * - Company website
- * - Company size (required)
- * - Primary role (required)
- * - Existing systems (required, multi-select)
- * - Pain points (optional, multi-select)
- *
- * Integrates with the onboarding store to:
- * - Read/write step data via Pinia store
- * - Expose isValid for wizard navigation control
+ * CompanyInfoStep - Flowbite-style first onboarding step for company information.
  */
 import { reactive, watch, onMounted } from 'vue'
 import { useOnboardingStore } from '@/stores/onboarding'
@@ -71,7 +59,6 @@ const PAIN_POINTS = [
   { value: 'scalability', label: 'Cannot scale current process' },
 ] as const
 
-/** Load initial data from store or props */
 function getInitialData(): CompanyInfoData {
   const storeData = store.getWizardStepData('company_info')
   const source = storeData ?? props.data
@@ -88,12 +75,10 @@ function getInitialData(): CompanyInfoData {
 
 const form = reactive<CompanyInfoData>(getInitialData())
 
-/** Sync initial data to store on mount */
 onMounted(() => {
   store.setWizardStepData('company_info', { ...form })
 })
 
-/** Toggle a value in an array field */
 function toggleArrayItem(field: 'existing_systems' | 'pain_points', value: string): void {
   const arr = form[field] ?? []
   const index = arr.indexOf(value)
@@ -105,7 +90,6 @@ function toggleArrayItem(field: 'existing_systems' | 'pain_points', value: strin
   form[field] = [...arr]
 }
 
-/** Emit form data changes to parent and sync to store */
 watch(
   form,
   (newVal) => {
@@ -116,17 +100,30 @@ watch(
   { deep: true },
 )
 
-/** Whether the form has the minimum required data */
+function isValidUrl(value: string): boolean {
+  if (!value || !value.trim()) return true
+  try {
+    new URL(value.startsWith('http') ? value : `https://${value}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function isValid(): boolean {
   return (
     form.company_name.trim().length > 0 &&
     !!form.company_size &&
     !!form.primary_role &&
-    form.existing_systems.length > 0
+    form.existing_systems.length > 0 &&
+    isValidUrl(form.company_website)
   )
 }
 
 function handleSubmit(): void {
+  if (form.company_website && !form.company_website.startsWith('http')) {
+    form.company_website = `https://${form.company_website}`
+  }
   if (isValid()) {
     emit('next', { ...form })
   }
@@ -139,48 +136,48 @@ defineExpose({ isValid })
   <div class="space-y-5">
     <!-- Company Name -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="company_name">
+      <label for="company_name" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Company Name <span class="text-red-500">*</span>
       </label>
       <input
         id="company_name"
         v-model="form.company_name"
         type="text"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
         placeholder="Enter your company name"
       />
     </div>
 
     <!-- Company Website -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="company_website">
+      <label for="company_website" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Website
       </label>
       <input
         id="company_website"
         v-model="form.company_website"
-        type="url"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text placeholder-pim-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        type="text"
+        class="block w-full rounded-lg border bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
+        :class="form.company_website && !isValidUrl(form.company_website) ? 'border-red-500 dark:border-red-500' : 'border-gray-300'"
         placeholder="https://www.example.com"
       />
+      <p v-if="form.company_website && !isValidUrl(form.company_website)" class="mt-2 text-sm text-red-600 dark:text-red-500">
+        Please enter a valid website (e.g. example.com or https://example.com)
+      </p>
     </div>
 
     <!-- Company Size -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="company_size">
+      <label for="company_size" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Company Size <span class="text-red-500">*</span>
       </label>
       <select
         id="company_size"
         v-model="form.company_size"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option value="">Select company size</option>
-        <option
-          v-for="size in COMPANY_SIZES"
-          :key="size.value"
-          :value="size.value"
-        >
+        <option v-for="size in COMPANY_SIZES" :key="size.value" :value="size.value">
           {{ size.label }}
         </option>
       </select>
@@ -188,20 +185,16 @@ defineExpose({ isValid })
 
     <!-- Primary Role -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-pim-text" for="primary_role">
+      <label for="primary_role" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Your Primary Role <span class="text-red-500">*</span>
       </label>
       <select
         id="primary_role"
         v-model="form.primary_role"
-        class="w-full rounded-lg border border-pim-border bg-white px-3 py-2 text-sm text-pim-text focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-primary-500 dark:focus:ring-primary-500"
       >
         <option value="">Select your role</option>
-        <option
-          v-for="role in PRIMARY_ROLES"
-          :key="role.value"
-          :value="role.value"
-        >
+        <option v-for="role in PRIMARY_ROLES" :key="role.value" :value="role.value">
           {{ role.label }}
         </option>
       </select>
@@ -209,63 +202,66 @@ defineExpose({ isValid })
 
     <!-- Existing Systems -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Current Systems <span class="text-red-500">*</span>
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
         What systems do you currently use to manage product data?
       </p>
       <div class="space-y-2">
         <label
           v-for="system in EXISTING_SYSTEMS"
           :key="system.value"
-          class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-pim-border px-3 py-2.5 transition-colors hover:bg-pim-surface"
-          :class="{
-            'border-primary-500 bg-primary-50': form.existing_systems.includes(system.value),
-          }"
+          class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors"
+          :class="form.existing_systems.includes(system.value)
+            ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700'"
         >
           <input
             type="checkbox"
             :checked="form.existing_systems.includes(system.value)"
-            class="h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
             @change="toggleArrayItem('existing_systems', system.value)"
           />
-          <span class="text-sm text-pim-text">{{ system.label }}</span>
+          <span class="text-sm text-gray-900 dark:text-gray-300">{{ system.label }}</span>
         </label>
       </div>
     </div>
 
     <!-- Pain Points -->
     <div>
-      <label class="mb-2 block text-sm font-medium text-pim-text">
+      <label class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
         Key Challenges
       </label>
-      <p class="mb-2 text-xs text-pim-muted">
+      <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
         What are your biggest product data management challenges? (optional)
       </p>
       <div class="space-y-2">
         <label
           v-for="point in PAIN_POINTS"
           :key="point.value"
-          class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-pim-border px-3 py-2.5 transition-colors hover:bg-pim-surface"
-          :class="{
-            'border-primary-500 bg-primary-50': (form.pain_points ?? []).includes(point.value),
-          }"
+          class="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors"
+          :class="(form.pain_points ?? []).includes(point.value)
+            ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20'
+            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700'"
         >
           <input
             type="checkbox"
             :checked="(form.pain_points ?? []).includes(point.value)"
-            class="h-4 w-4 rounded border-pim-border text-primary-600 focus:ring-primary-500"
+            class="h-4 w-4 rounded border-gray-300 bg-gray-100 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-primary-600"
             @change="toggleArrayItem('pain_points', point.value)"
           />
-          <span class="text-sm text-pim-text">{{ point.label }}</span>
+          <span class="text-sm text-gray-900 dark:text-gray-300">{{ point.label }}</span>
         </label>
       </div>
     </div>
 
     <!-- Validation hint -->
-    <p v-if="!isValid()" class="text-xs text-amber-600">
+    <div v-if="!isValid()" class="flex items-center rounded-lg bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-gray-800 dark:text-yellow-300" role="alert">
+      <svg class="me-3 h-4 w-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Zm-1 5a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0V7Zm1 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" />
+      </svg>
       Please fill in company name, size, role, and select at least one existing system.
-    </p>
+    </div>
   </div>
 </template>
